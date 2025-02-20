@@ -1,0 +1,85 @@
+Group;TAXA;Opport.;ESG;RSLA 1-2;RSLA 3;RSL 4
+Green;Acrosiphonia/Spongomorpha spp.;;2;TRUE;TRUE;
+Green;Blidingia spp.;1;2;TRUE;TRUE;TRUE
+Green;Chaetomorpha melagonium;;2;TRUE;TRUE;TRUE
+Green;Chaetomorpha/Rhizoclonium spp.;1;2;TRUE;TRUE;TRUE
+Green;Cladophora rupestris;;2;TRUE;TRUE;TRUE
+Green;Cladophora spp.;1;2;TRUE;TRUE;TRUE
+Green;Codium fragile;;1;;TRUE;
+Green;Monostroma grevillie;1;2;TRUE;;
+Green;Prasiola spp.;;2;TRUE;;
+Green;Spongomorpha spp.;;2;;;TRUE
+Green;Ulothrix/Urospora spp.;1;2;TRUE;TRUE;
+Green;Ulva lactuca;1;2;TRUE;TRUE;TRUE
+Green;Ulva spp.;1;2;TRUE;TRUE;TRUE
+Brown;Alaria esculenta;;1;TRUE;;
+Brown;Ascophyllum nodosum;;1;TRUE;TRUE;TRUE
+Brown;Asperococcus fistulosus;;1;TRUE;;
+Brown;Chorda filum;;1;TRUE;TRUE;TRUE
+Brown;Chordaria flagelliformis;;2;TRUE;TRUE;TRUE
+Brown;Cladostephus spongiosus;;2;TRUE;;
+Brown;Desmarestia aculeata;;2;TRUE;;
+Brown;Dictyosiphon foeniculaceus;;2;TRUE;TRUE;TRUE
+Brown;Dictyota dichotoma;;2;TRUE;TRUE;
+Brown;Ectocarpus spp.;1;2;TRUE;TRUE;TRUE
+Brown;Elachista fucicola;;2;TRUE;TRUE;TRUE
+Brown;Fucus ceranoides;;1;;TRUE;TRUE
+Brown;Fucus evanescens;;1;TRUE;;
+Brown;Fucus serratus;;1;TRUE;TRUE;TRUE
+Brown;Fucus spiralis;;1;TRUE;TRUE;TRUE
+Brown;Fucus vesiculosus;;1;TRUE;TRUE;TRUE
+Brown;Halidrys siliquosa;;1;TRUE;;
+Brown;Halosiphon tomentosus (tidl. Chorda tomentosa);;1;TRUE;TRUE;
+Brown;Himanthalia elongata;;1;TRUE;;
+Brown;Laminaria digitata;;1;TRUE;TRUE;TRUE
+Brown;Laminaria hyperborea;;1;TRUE;TRUE;TRUE
+Brown;Leathesia marina (tidl. Leathesia difformis);;1;TRUE;TRUE;TRUE
+Brown;Mesogloia vermiculata;;2;TRUE;TRUE;TRUE
+Brown;Pelvetia canaliculata;;1;TRUE;TRUE;TRUE
+Brown;Petalonia fascia;;2;TRUE;;
+Brown;Pylaiella littoralis;1;2;TRUE;TRUE;TRUE
+Brown;Ralfsia spp.;;1;TRUE;TRUE;TRUE
+Brown;Saccharina latissima;;1;TRUE;TRUE;
+Brown;Scytosiphon lomentaria;;1;TRUE;TRUE;TRUE
+Brown;Sphacelari cirrosa;;2;TRUE;TRUE;TRUE
+Brown;Sphacelaria/Spaceloderma/Protohalopteris/Chaetopteris/Battersia spp.;;2;TRUE;TRUE;TRUE
+Brown;Spongonema tomentosum;1;2;TRUE;TRUE;TRUE
+Red;Aglathamnion sepositum;;2;TRUE;;
+Red;Aglaothamnion/Callithamnion spp.;;2;TRUE;TRUE;TRUE
+Red;Ahnfeltia plicata;;1;TRUE;TRUE;TRUE
+Red;Audouinella/Acrochaetium/Colaconema/Meiodiscus/Rubrointrusa/Rhodothamniella spp.;;2;TRUE;TRUE;TRUE
+Red;Bangia fuscopurpurea;;2;TRUE;;
+Red;Brogniartella byssioides;;2;TRUE;;
+Red;Calcareous encrusters (CORAX);;1;TRUE;TRUE;TRUE
+Red;Ceramium shuttleworthanium;;2;TRUE;TRUE;TRUE
+Red;Ceramium spp.;1;2;TRUE;TRUE;TRUE
+Red;Ceramium virgatum (tidl. C. nodulosum);;2;TRUE;TRUE;TRUE
+Red;Chondrus crispus;;1;TRUE;TRUE;TRUE
+Red;Corallina officinalis;;1;TRUE;TRUE;TRUE
+Red;Cystoclonium purpureum;;1;TRUE;TRUE;TRUE
+Red;Delesseria sanguinea;;2;TRUE;TRUE;
+Red;Dumontia contorta;;1;TRUE;TRUE;TRUE
+Red;Erythrotrichia carnea;;2;TRUE;TRUE;
+Red;Furcellaria lumbricalis;;1;TRUE;TRUE;TRUE
+Red;Gloiosiphonia capillaris;;1;;TRUE;
+Red;Heterosiphonia plumosa;;2;TRUE;TRUE;TRUE
+Red;Hildenbrandia rubra;;1;TRUE;TRUE;TRUE
+Red;Lomentaria articulata;;1;TRUE;;
+Red;Lomentaria clavellosa;;1;TRUE;TRUE;TRUE
+Red;Mastocarpus stellatus;;1;TRUE;TRUE;TRUE
+Red;Melobesia membranacea;;1;TRUE;TRUE;TRUE
+Red;Membranoptera alata;;2;TRUE;TRUE;TRUE
+Red;Nemalion elminthoides;;1;TRUE;TRUE;TRUE
+Red;Osmundea spp.;;1;TRUE;TRUE;TRUE
+Red;Palmaria palmata;;1;TRUE;TRUE;TRUE
+Red;Phycodrys rubens;;2;TRUE;;
+Red;Phyllophora spp. inkl. Coccotylus truncatus;;1;TRUE;TRUE;TRUE
+Red;Plocamium cartilagineum;;2;TRUE;TRUE;TRUE
+Red;Plumaria plumosa;;2;TRUE;TRUE;TRUE
+Red;Polyides rotundus;;1;TRUE;;
+Red;Polysiphonia/Polyostea/Vertebrata spp.;;2;TRUE;TRUE;TRUE
+Red;Porphyra/Pyropia/Wildemania spp.;1;2;TRUE;TRUE;TRUE
+Red;Ptilota gunneri;;2;TRUE;TRUE;TRUE
+Red;Rhodomela confervoides;;2;TRUE;TRUE;TRUE
+Red;Vertebrata fucoides (tidl. Polysiphonia fucoides);;2;TRUE;TRUE;TRUE
+Red;Vertebrata lanosa (tidl. Polysiphonia lanosa);;2;TRUE;TRUE;TRUE

@@ -1,0 +1,26 @@
+index;calc;description;eqr00;eqr02;eqr04;eqr06;eqr08;eqr10
+RSLA1;n_norm;"Normalisert rikhet (ant arter*F)";0;4;10;15;30;80
+RSLA1;pctG;"% andel arter grønnalger (%grønn/tot)";100;80;45;30;20;0
+RSLA1;pctR;"% andel arter rødalger (%rød/tot)";0;10;22;30;40;100
+RSLA1;ESG12;"ESG1/ESG2";0;0.2;0.4;0.6;0.8;2.5
+RSLA1;pctOpp;"% andel arter opportunister (%opp/tot)";100;50;35;25;15;0
+RSLA1;sumB;"Sum forekomst brun";0;10;25;40;90;450
+RSLA2;n_norm;"Normalisert rikhet (ant arter*F)";0;4;10;15;30;80
+RSLA2;pctG;"% andel arter grønnalger (%grønn/tot)";100;80;45;30;20;0
+RSLA2;pctR;"% andel arter rødalger (%rød/tot)";0;10;22;30;40;100
+RSLA2;ESG12;"ESG1/ESG2";0;0.2;0.4;0.6;0.8;2.5
+RSLA2;pctOpp;"% andel arter opportunister (%opp/tot)";100;50;35;25;15;0
+RSLA2;sumB;"Sum forekomst brun";0;10;25;40;90;450
+RSLA3;n_norm;"Normalisert rikhet (ant arter*F)";0;4;12;20;30;65
+RSLA3;pctG;"% andel arter grønnalger (%grønn/tot)";100;30;30;25;20;0
+RSLA3;pctR;"% andel arter rødalger (%rød/tot)";0;10;21;30;40;100
+RSLA3;ESG12;"ESG1/ESG2";0;0.2;0.4;0.7;1;1.5
+RSLA3;pctOpp;"% andel arter opportunister (%opp/tot)";100;50;40;32;25;0
+RSLA3;sumG;"Sum forekomst grønn";300;90;45;28;14;1
+RSLA3;sumB;"Sum forekomst brun";0;15;30;60;120;300
+RSLA3;pctB;"% andel arter brunalger (%brun/tot)";0;10;20;30;40;100
+RSL4;n_norm;"Normalisert rikhet (ant arter*F)";0;4;9;16;25;40
+RSL4;pctG;"% andel arter grønnalger (%grønn/tot)";100;60;40;30;25;0
+RSL4;pctR;"% andel arter rødalger (%rød/tot)";0;10;16;23;30;100
+RSL4;ESG12;"ESG1/ESG2";0;0.1;0.35;0.5;0.65;1
+RSL4;pctOpp;"% andel arter opportunister (%opp/tot)";100;41;36;23;16;0

@@ -1,0 +1,30 @@
+Parameter;Beskrivelse;Verdi
+CfColumn;Kolonnenr. for cf i feltskjema (transekt);2
+CodeColumn;Kolonnenr. for kode i feltskjema (transekt);1
+FirstObservationRowBeach;Radnr. for første obs. strandsone;38
+FirstObservationRowTransect;Radnr. for første obs. transekt;15
+FirstObservationRowLowerDepthLimit;Radnr. for første obs. nedre voksegrense;16
+NameColumn;Kolonnenr. for navn i feltskjema (transekt og strandobs);5
+SpColumn;Kolonnenr. for cf i feltskjema (transekt);3
+TaxonomyNameColumn;Kolonnenr. for navn i artsliste;2
+TaxonomySheetCodeColumn;Kolonnenr. for kode i artsliste;1
+TaxonomySheetName;Navn på ark m artsliste;Artsliste
+TaxonomySheetStartRow;Radnr. for første taxon i artsliste;2
+ProjectRowTransect;Radnr. Prosjekt (transekt);1
+StationCodeRowTransect;Radnr. Stasjonskode (transekt);2
+OldStationCodeRowTransect;Radnr. Gammel stasjonskode (transekt);3
+StationNameRowTransect;Radnr. Stasjonsnavn (transekt);4
+LongitudeRowTransect;Radnr. lengdegrad (transekt);9
+LatitudeRowTransect;Radnr. Breddegrad (transekt);10
+MetadataColumnTransect;Kolonnenr. Stasjon/prosjektdata (transekt);2
+TransectSheetTemplateAlgae;Navn algeskjema-mal (transekt);Transektmal-Alger
+TransectSheetTemplateAnimals;Navn dyreskjema-mal (transekt);Transektmal-Dyr
+ProjectColumnTransectStations;Kolonnenr. prosjektnavn (transekt);1
+StationCodeColumnTransectStations;Kolonnenr. Stasjonskode (transekt);2
+OldStationCodeColumnTransectStations;Kolonnenr. Gammel stasjonskode (transekt);3
+StationNameColumnTransectStations;Kolonnenr. Stasjonsnavn (transekt);4
+LongitudeColumnTransectStations;Kolonnenr. Lengdegrad (transekt);8
+LatitudeColumnTransectStations;Kolonnenr. Breddegrad (transekt);9
+TransectStationSheet;Navn transektstasjoner-ark;Transekt-stasjoner
+HbDatabaseName;Sti og navn på hardbunnsdatabasen;P:\Databases\Biology\Marine-hard-bottom\HardBottom-App.accdb
+dummy;dummy;dummy
