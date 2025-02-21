@@ -1,5 +1,5 @@
 packages <- c(
-  
+
   'dplyr',
   'tidyr',
   'readxl',
@@ -16,6 +16,7 @@ packages <- c(
   'bsicons',
   'htmltools',
   'openxlsx',
+  'remotes',
   '')
 options(Ncpus = -1)
 for (pkg in packages) {
@@ -24,6 +25,19 @@ for (pkg in packages) {
   }
   install.packages(pkg)
   if ( ! library(pkg, character.only=TRUE, logical.return=TRUE) ) {
+    quit(status=1, save='no')
+  }
+}
+
+packages_dev <- c(
+  'NIVA-Denmark/ambiR',
+  '')
+for (pkg_dev in packages_dev) {
+  if (pkg_dev == '') {
+    next
+  }
+  remotes::install_github(pkg_dev)
+  if ( ! library(pkg_dev, character.only=TRUE, logical.return=TRUE) ) {
     quit(status=1, save='no')
   }
 }
