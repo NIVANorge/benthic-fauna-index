@@ -1,5 +1,26 @@
 
 
+fix_column_names<- function(s){
+
+  df <- data.frame(ix=1:length(s), s=s)
+
+  df <- df %>%
+    mutate(s=ifelse(is.na(s),".",s))
+
+  df <- df %>%
+    group_by(s) %>%
+    arrange(ix) %>%
+    mutate(n=row_number()-1) %>%
+    ungroup()
+  df <- df %>%
+    arrange(ix) %>%
+    mutate(s = ifelse(n>0,paste0(s,n),s))
+
+  return(df$s)
+}
+
+
+
 .classcolors <- function(){
   # returns a vector of the five colours used to represent status classes
   c('#FF0000','#FFC000','#FFFF00','#92D050','#00B0F0')
@@ -931,18 +952,23 @@ read_excel_sheet <- function(sheet, xl_path, header=F){
 read_excel_all <- function(xl_path, header=F, progress=NULL){
   require(readxl)
   sheets <- readxl::excel_sheets(xl_path)
-
   list_df <- list()
-
+  header <- ifelse(is.null(header),T,header)
+  is <- 0
   for(i in 1:length(sheets)){
     df <- read_excel_sheet(sheets[i], xl_path,header=header)
-    list_df[[i]] <- df
+    # only add sheets which are not empty
+    if(nrow(df)>0){
+      is <- is+1
+      list_df[[is]] <- df
+      names(list_df)[is] <- sheets[i]
+    }
     if(!is.null(progress)){
       progress$set(value = i+1)
     }
   }
   #list_df <- lapply(sheets, read_excel_sheet, xl_path)
-  names(list_df) <- sheets
+  # names(list_df) <- sheets
   return(list_df)
 }
 

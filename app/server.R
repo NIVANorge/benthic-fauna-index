@@ -7,6 +7,7 @@ library(reactable)
 library(htmltools)
 library(openxlsx)
 library(ambiR)
+library(stringr)
 
 source("functions.R")
 
@@ -14,6 +15,13 @@ source("functions.R")
 dfbnds <- read.table("class_boundaries.txt", sep=";", header=T)
 
 function(input, output, session) {
+
+  # possible input structures
+  label_long <- "long (DB)"
+  label_wide_species <-  "wide (species in columns)"
+  label_wide_station <-  "wide (stations in columns)"
+
+
 
   xl_sheets <- reactive({
     file <- input$file1
@@ -28,10 +36,12 @@ function(input, output, session) {
     progress$set(message = 'Reading Excel data',
                  detail = "shouldn't take long...")
 
-    list_df <- read_excel_all(file$datapath, input$hasHeader, progress)
+    list_df <- read_excel_all(file$datapath, F, progress)
 
     return(list_df)
   })
+
+
 
 
   xl_names <- reactive({
@@ -91,6 +101,13 @@ function(input, output, session) {
   })
 
 
+  data_structures <- reactive({
+    req(xl_names())
+    c(label_long,
+      label_wide_species,
+      label_wide_station)
+  })
+
   stations_ok <- reactive({
     req(station_column())
 
@@ -109,7 +126,9 @@ function(input, output, session) {
     xl_data()
     #accordion_panel_open("setup","Stations")
     accordion_panel_open("setup","Observations")
+    accordion_panel_open("setup","Columns and rows")
   })
+
 
   output$selectSheet <- renderUI(
     tagList(selectInput(
@@ -120,13 +139,125 @@ function(input, output, session) {
       selectize = T
       ))
   )
+
+  output$selectStructure <- renderUI(
+    tagList(selectInput(
+      "selectForm",
+      "Select data layout:",
+      choices = data_structures(),
+      selectize = T
+    ))
+  )
+
+
   output$checkHeader <- renderUI(
+    if(input$selectForm==label_long){
     tagList(checkboxInput(
       "hasHeader",
       "has column names",
       TRUE
-    ))
+    ))}else{
+      # tagList(checkboxInput(
+      #   "hasHeader",
+      #   "has column names",
+      #   FALSE
+      # ))
+      NULL
+    }
   )
+
+  output$selectColumnRowStn <- renderUI(
+    if(input$selectForm==label_wide_station){
+      tagList(selectInput(
+        "colrowStn",
+        "Station row:",
+        choices = sheet_rows(),
+        selectize = F
+      ))
+    }else{
+      tagList(selectInput(
+        "colrowStn",
+        "Station column:",
+        choices = sheet_columns(),
+        selectize = T
+      ))
+    }
+  )
+
+  output$selectColumnRowRep <- renderUI(
+    if(input$selectForm==label_wide_station){
+      tagList(selectInput(
+        "colrowRep",
+        "Replicates row:",
+        choices = sheet_rows(),
+        selectize = F
+      ))
+    }else{
+      tagList(selectInput(
+        "colrowRep",
+        "Replicates column:",
+        choices = sheet_columns(),
+        selectize = T
+      ))
+    }
+  )
+
+  output$selectColumnRowSpecies <- renderUI(
+    if(input$selectForm==label_wide_species){
+      tagList(selectInput(
+        "colrowSpec",
+        "Species row:",
+        choices = sheet_rows(),
+        selectize = F
+      ))
+    }else{
+      tagList(selectInput(
+        "colrowSpec",
+        "Species column:",
+        choices = sheet_columns(),
+        selectize = T
+      ))
+    }
+  )
+
+  output$selectColumnRowCount <- renderUI(
+    if(input$selectForm==label_long){
+      tagList(selectInput(
+        "colrowCount",
+        "Abundance/count column:",
+        choices = sheet_columns(),
+        selectize = T
+      ))
+    }else{
+      NULL
+    }
+  )
+
+
+  output$obs_warning <- renderUI({
+
+    req(obs_data())
+    n <- obs_data()[["dropped"]]
+    msg <- obs_data()[["msg"]]
+    if(is.null(n)){
+      n <- 0
+    }
+    msg <- paste0(n," values dropped (", msg, "). Check your input selections!")
+
+    if(n==0){
+      return(
+        tagList(
+          div()
+        )
+      )
+    }else{
+      return(
+        tagList(
+          div(style="color:red", msg)
+        )
+      )
+    }
+  })
 
   output$station_warning <- renderUI({
     ok <- stations_ok()[["ok"]]
@@ -145,6 +276,8 @@ function(input, output, session) {
       )
     }
     })
+
+
 
 
   stations <- reactive({
@@ -265,23 +398,69 @@ function(input, output, session) {
   })
 
 
-  obs_data <- reactive({
+  sheet_columns <- reactive({
 
-    #req(stations_ok())
-    #req(stations())
+    df <- req(obs_data_raw())
+    use_head <- ifelse(is.null(input$hasHeader),
+                       TRUE,
+                       input$hasHeader)
 
-    #df <- species_data(xl_data(), stations(), options)
-    df <- xl_data()
-    return(df)
+    if(use_head){
+      cols <- names(df)
+    }else{
+      cols <- 1:ncol(df)
+    }
+    cols <- c("none", cols)
+    return(cols)
   })
 
-  output$observations <-renderReactable({
+  sheet_rows <- reactive({
+
+    df <- req(obs_data_raw())
+    use_head <- ifelse(is.null(input$hasHeader),
+                       TRUE,
+                       input$hasHeader)
+
+    if(use_head){
+      rows <- 1:(nrow(df)-1)
+    }else{
+      rows <- 1:nrow(df)
+    }
+    rows <- c("none", rows)
+    return(rows)
+  })
+
+  obs_data_raw <- reactive({
+
+    req(xl_data())
+    df <- xl_data()
+    if(input$selectForm==label_long){
+      use_col_names <- ifelse(is.null(input$hasHeader),
+                              FALSE,
+                              input$hasHeader)
+    }else{
+      use_col_names <- FALSE
+    }
+
+    if(use_col_names){
+      columnnames <- df[1,] %>% unlist()
+      columnnames <- fix_column_names(columnnames)
+      names(df) <- columnnames
+      df <- df[2:nrow(df),]
+    }
+
+      return(df)
+
+  })
+
+
+  output$observationsraw <-renderReactable({
 
     #req(stations_ok())
     #req(stations())
-    req(obs_data())
+    req(obs_data_raw())
 
-    df <- obs_data()
+    df <- obs_data_raw()
 
     if(is.null(df)){
       return(NULL)
@@ -310,6 +489,263 @@ function(input, output, session) {
                 ))
     }
   })
+
+
+
+  obs_data <- reactive({
+    req(obs_data_raw())
+    df <- obs_data_raw()
+
+
+    dropped <- 0
+    msg <- ""
+
+    if(input$selectForm==label_long){
+      # browser()
+      cols <- c(input$colrowStn,
+                input$colrowRep,
+                input$colrowSpec,
+                input$colrowCount
+      )
+      cols <- cols[cols!="none"]
+      if(length(cols)>0){
+        if(!input$hasHeader){
+          cols <- as.numeric(cols)
+        }
+
+        df <- df[,cols]
+      }else{
+        return(NULL)
+      }
+    }else if(input$selectForm==label_wide_species){
+
+      row_spec <- as.numeric(input$colrowSpec)
+
+      if(is.na(row_spec)){
+        return(NULL)
+      }else{
+        group_vars <- c("Species")
+
+        species <- df[row_spec,] %>% unlist()
+        col_stn <- input$colrowStn
+        col_rep <- input$colrowRep
+        cols_keep <- 1:ncol(df)
+        rows_keep <- 1:nrow(df)
+        if(col_rep!="none"){
+          group_vars <- c("Replicate", group_vars)
+          species[names(df)==col_rep] <- "Replicate"
+        }
+        if(col_stn!="none"){
+          group_vars <- c("Station", group_vars)
+          species[names(df)==col_stn] <- "Station"
+        }
+
+        cols_keep <- cols_keep[!is.na(species)]
+        rows_keep <- rows_keep[rows_keep!=row_spec]
+        names(df) <- species
+
+        na_cols <- 1:ncol(df)
+        na_cols <- na_cols[is.na(species)]
+
+        if(length(n)>0){
+          dropped <- df[,na_cols] %>% unlist()
+          dropped <- dropped %>%
+            as.numeric()
+          dropped <- dropped[!is.na(dropped)]
+          dropped <- length(dropped)
+          msg <- "missing species names"
+        }
+
+
+        cols_piv <- names(df)[!is.na(species)]
+        cols_piv <- cols_piv[!cols_piv %in% c("Station","Replicate")]
+        df <- df[rows_keep,cols_keep]
+        df <- df %>%
+           pivot_longer(cols=any_of(cols_piv), names_to="Species", values_to = "Count")
+
+        df <- df %>%
+          filter(!is.na(Count)) %>%
+          mutate(Count=as.numeric(Count))
+
+        df <- df %>%
+          group_by(across(all_of(group_vars))) %>%
+          summarise(Count=sum(Count,na.rm=T), .groups="drop")
+
+
+      }
+
+    }else if(input$selectForm==label_wide_station){
+
+      colSpec <- input$colrowSpec
+      ixcolSpec <- match(colSpec, names(df))
+
+      if(colSpec=="none"){
+        return(NULL)
+      }else{
+        row_stn <- as.numeric(input$colrowStn)
+        row_rep <- as.numeric(input$colrowRep)
+
+        if(is.na(row_stn) & is.na(row_rep)){
+
+          names(df) <- paste0("col_",1:ncol(df))
+          names(df)[ixcolSpec] <- "Species"
+
+          df <- df %>%
+            filter(!is.na(Species))
+
+          cols_piv <- 1:ncol(df)
+          cols_piv <- cols_piv[cols_piv!=ixcolSpec]
+          cols_piv <- names(df)[cols_piv]
+
+          df <- df %>%
+            pivot_longer(cols=all_of(cols_piv), names_to="Column", values_to = "Count")
+
+          df <- df %>%
+            filter(!is.na(Count)) %>%
+            mutate(Count = as.numeric(Count))
+
+          df <- df %>%
+            select(all_of(c("Species","Count")))
+
+          df <- df %>%
+            group_by(Species) %>%
+            summarise(Count=sum(Count, na.rm = T), .groups="drop")
+
+
+        }else{
+          #browser()
+          if(!is.na(row_stn)){
+            stns <- df[row_stn,] %>% unlist()
+          }else{
+            stns <- rep("", ncol(df))
+          }
+
+          if(!is.na(row_rep)){
+            reps <- df[row_rep,] %>% unlist()
+          }else{
+            reps <- rep("", ncol(df))
+          }
+
+          stns <- paste(stns, reps, sep="_")
+
+          names(df)[ixcolSpec] <- "Species"
+
+          df <- df %>%
+            filter(!is.na(Species))
+
+          names(df) <- stns
+          names(df)[ixcolSpec] <- "Species"
+          #rows_keep <- 1:nrow(df)
+          #rows_keep <- rows_keep[!rows_keep %in% c(row_stn, row_rep)]
+          #df <- df[rows_keep,]
+
+          cols_piv <- 1:ncol(df)
+          cols_piv <- cols_piv[cols_piv!=ixcolSpec]
+          cols_piv <- names(df)[cols_piv]
+
+
+          df <- df %>%
+            pivot_longer(cols=all_of(cols_piv), names_to="Station", values_to = "Count")
+
+          df <- df %>%
+            separate("Station", into = c("Station","Replicate"), sep="_")
+
+          for(i in 2:nrow(df)){
+            if(df[i,"Station"] == "NA"){
+              df[i,"Station"] <- df[i-1,"Station"]
+            }
+            if(df[i,"Replicate"] == "NA"){
+              df[i,"Replicate"] <- df[i-1,"Replicate"]
+            }
+          }
+
+          df <- df %>%
+            filter(!is.na(Count)) %>%
+            mutate(Count = as.numeric(Count))
+
+
+          if(is.na(row_stn)){
+            df <- df %>%
+              group_by(Replicate, Species) %>%
+              summarise(Count=sum(Count, na.rm = T), .groups="drop")
+
+            df <- df %>%
+              mutate(ord1 = factor(Replicate,
+                                   levels = str_sort(unique(Replicate), numeric = T),
+                                   ordered = T)) %>%
+              arrange(ord1, Species) %>%
+              select(-ord1)
+
+          }else{
+            if(is.na(row_rep)){
+              df <- df %>%
+                group_by(Station, Species) %>%
+                summarise(Count=sum(Count, na.rm = T), .groups="drop")
+
+              df <- df %>%
+                mutate(ord1 = factor(Station,
+                                     levels = str_sort(unique(Station), numeric = T),
+                                     ordered = T)) %>%
+                arrange(ord1, Species) %>%
+                select(-ord1)
+            }else{
+              df <- df %>%
+                mutate(ord1 = factor(Station,
+                                     levels = str_sort(unique(Station), numeric = T),
+                                     ordered = T)) %>%
+                mutate(ord2 = factor(Replicate,
+                                     levels = str_sort(unique(Replicate), numeric = T),
+                                     ordered = T)) %>%
+                arrange(ord1, ord2, Species) %>%
+                select(-ord1, -ord2)
+            }
+
+          }
+
+        }}
+    }
+
+    return(list("df"=df, "dropped"=dropped, "msg"=msg))
+  })
+
+
+
+  output$observations <-renderReactable({
+
+    #req(stations_ok())
+    #req(stations())
+    req(obs_data())
+
+    df <- obs_data()$df
+
+    if(is.null(df)){
+      return(NULL)
+    }else{
+      reactable(df,
+                sortable = F,
+                style = list(fontSize = "0.8rem"),
+                columns = list(
+                  Kode = colDef(width = 60),
+                  CF = colDef(width = 30),
+                  SP = colDef(width = 30),
+                  NB = colDef(width = 30),
+                  Navn = colDef(width = 300)
+                ), # columns
+                defaultColDef = colDef(minWidth = 55, show=T, vAlign = "bottom"),
+                compact = TRUE,
+                wrap = FALSE,
+                fullWidth = T,
+                resizable = TRUE,
+                bordered = TRUE,
+                defaultPageSize = 999,
+                highlight = TRUE,
+                theme = reactableTheme(
+                  headerStyle = list(background = "#f7f7f8"),
+                  cellPadding = "1px 1px"
+                ))
+    }
+  })
+
 
   output$btnDownloadInds <- downloadHandler(
 
