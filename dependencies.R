@@ -17,6 +17,7 @@ packages <- c(
   'htmltools',
   'openxlsx',
   'remotes',
+  'stringr',
   '')
 options(Ncpus = -1)
 for (pkg in packages) {
