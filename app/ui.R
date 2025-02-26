@@ -9,7 +9,7 @@ page_navbar(
   nav_panel(title="Observations",
             icon = bsicons::bs_icon("file-earmark-arrow-up"),
 
-            layout_columns(col_widths = c(3,5),
+            layout_columns(col_widths = c(5,7),
 
             accordion(id="setup",
                       open = "Choose Excel file",
@@ -86,7 +86,7 @@ page_navbar(
                           ) # accordion_panel
                         )  # verticalLayout
             ), # accordion
-            col_widths = c(3,5))),
+            col_widths = c(5,7))),
 
 
 
