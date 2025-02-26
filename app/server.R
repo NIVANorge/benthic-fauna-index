@@ -132,6 +132,7 @@ function(input, output, session) {
 
 
   output$selectSheet <- renderUI(
+
     tagList(selectInput(
       "selectSheet",
       "Select sheet:",
@@ -167,72 +168,90 @@ function(input, output, session) {
     }
   )
 
-  output$selectColumnRowStn <- renderUI(
+  output$selectColumnRowStn <- renderUI({
     if(input$selectForm==label_wide_station){
-      tagList(selectInput(
+      res <- tagList(selectInput(
         "colrowStn",
         "Station row:",
         choices = sheet_rows(),
         selectize = F
       ))
     }else{
-      tagList(selectInput(
+
+      val_sel <- match_list(sheet_columns(), "st")
+
+      res <- tagList(selectInput(
         "colrowStn",
         "Station column:",
         choices = sheet_columns(),
-        selectize = T
+        selectize = T,
+        selected = val_sel
       ))
     }
-  )
 
-  output$selectColumnRowRep <- renderUI(
+})
+
+  output$selectColumnRowRep <- renderUI({
     if(input$selectForm==label_wide_station){
-      tagList(selectInput(
+      res <- tagList(selectInput(
         "colrowRep",
         "Replicates row:",
         choices = sheet_rows(),
         selectize = F
       ))
     }else{
-      tagList(selectInput(
+
+      val_sel <- match_list(sheet_columns(), "rep")
+
+      res <- tagList(selectInput(
         "colrowRep",
         "Replicates column:",
         choices = sheet_columns(),
-        selectize = T
+        selectize = T,
+        selected = val_sel
       ))
     }
-  )
+    return(res)
+})
 
-  output$selectColumnRowSpecies <- renderUI(
+  output$selectColumnRowSpecies <- renderUI({
     if(input$selectForm==label_wide_species){
-      tagList(selectInput(
+      res <-  tagList(selectInput(
         "colrowSpec",
         "Species row:",
         choices = sheet_rows(),
         selectize = F
       ))
     }else{
-      tagList(selectInput(
+      val_sel <- match_list(sheet_columns(), "sp")
+      res <- tagList(selectInput(
         "colrowSpec",
         "Species column:",
         choices = sheet_columns(),
-        selectize = T
+        selectize = T,
+        selected = val_sel
       ))
     }
-  )
+    return(res)
+  })
 
-  output$selectColumnRowCount <- renderUI(
+  output$selectColumnRowCount <- renderUI({
     if(input$selectForm==label_long){
-      tagList(selectInput(
+
+      val_sel <- match_list(sheet_columns(), c("count","ab","pop"))
+
+      res <- tagList(selectInput(
         "colrowCount",
         "Abundance/count column:",
         choices = sheet_columns(),
-        selectize = T
+        selectize = T,
+        selected = val_sel
       ))
     }else{
-      NULL
+      res <- NULL
     }
-  )
+    return(res)
+  })
 
 
   output$obs_warning <- renderUI({
@@ -259,6 +278,422 @@ function(input, output, session) {
       )
     }
   })
+
+
+  sheet_columns <- reactive({
+
+    df <- req(obs_data_raw())
+    use_head <- ifelse(is.null(input$hasHeader),
+                       TRUE,
+                       input$hasHeader)
+
+    if(use_head){
+      cols <- names(df)
+    }else{
+      cols <- 1:ncol(df)
+    }
+    cols <- c("none", cols)
+    return(cols)
+  })
+
+  sheet_rows <- reactive({
+
+    df <- req(obs_data_raw())
+    use_head <- ifelse(is.null(input$hasHeader),
+                       TRUE,
+                       input$hasHeader)
+
+    if(use_head){
+      rows <- 1:(nrow(df)-1)
+    }else{
+      rows <- 1:nrow(df)
+    }
+    rows <- c("none", rows)
+    return(rows)
+  })
+
+  obs_data_raw <- reactive({
+
+    req(xl_data())
+    df <- xl_data()
+    if(input$selectForm==label_long){
+      use_col_names <- ifelse(is.null(input$hasHeader),
+                              FALSE,
+                              input$hasHeader)
+    }else{
+      use_col_names <- FALSE
+    }
+
+    if(use_col_names){
+      columnnames <- df[1,] %>% unlist()
+      columnnames <- fix_column_names(columnnames)
+      names(df) <- columnnames
+      df <- df[2:nrow(df),]
+    }
+
+    return(df)
+
+  })
+
+
+  output$observationsraw <-renderReactable({
+
+    #req(stations_ok())
+    #req(stations())
+    req(obs_data_raw())
+
+    df <- obs_data_raw()
+
+    if(is.null(df)){
+      return(NULL)
+    }else{
+      reactable(df,
+                sortable = F,
+                style = list(fontSize = "0.8rem"),
+                columns = list(
+                  Kode = colDef(width = 60),
+                  CF = colDef(width = 30),
+                  SP = colDef(width = 30),
+                  NB = colDef(width = 30),
+                  Navn = colDef(width = 300)
+                ), # columns
+                defaultColDef = colDef(minWidth = 55, show=T, vAlign = "bottom"),
+                compact = TRUE,
+                wrap = FALSE,
+                fullWidth = T,
+                resizable = TRUE,
+                bordered = TRUE,
+                defaultPageSize = 10,
+                highlight = TRUE,
+                theme = reactableTheme(
+                  headerStyle = list(background = "#f7f7f8"),
+                  cellPadding = "1px 1px"
+                ))
+    }
+  })
+
+
+
+  obs_data <- reactive({
+    req(obs_data_raw())
+    df <- obs_data_raw()
+
+    form <- input$selectForm
+    idStn <- input$colrowStn
+    idRep <- input$colrowRep
+    idSpec <- input$colrowSpec
+    idCount <- input$colrowCount
+    has_header <- input$hasHeader
+
+    df <- reform_data(df, form,
+                      idStn, idRep, idSpec, idCount,
+                      label_long,
+                      label_wide_species,
+                      label_wide_station,
+                      has_header)
+    return(df)
+
+  })
+
+
+
+  output$observations <-renderReactable({
+
+    #req(stations_ok())
+    #req(stations())
+    req(obs_data())
+
+    df <- obs_data()[["df"]]
+
+    if(is.null(df)){
+      return(NULL)
+    }else{
+      reactable(df,
+                sortable = F,
+                style = list(fontSize = "0.8rem"),
+                # columns = list(
+                #   Kode = colDef(width = 60),
+                #   CF = colDef(width = 30),
+                #   SP = colDef(width = 30),
+                #   NB = colDef(width = 30),
+                #   Navn = colDef(width = 300)
+                # ), # columns
+                defaultColDef = colDef(minWidth = 55, show=T, vAlign = "bottom"),
+                compact = TRUE,
+                wrap = FALSE,
+                fullWidth = T,
+                resizable = TRUE,
+                bordered = TRUE,
+                defaultPageSize = 10,
+                highlight = TRUE,
+                theme = reactableTheme(
+                  headerStyle = list(background = "#f7f7f8"),
+                  cellPadding = "1px 1px"
+                ))
+    }
+  })
+
+
+  output$tblSpec <- renderReactable({
+
+    req(matched_spec())
+    df <- matched_spec()
+
+    if(is.null(input$unmatched)){
+      show_unmatched_only <- F
+    }else{
+      show_unmatched_only <- input$unmatched
+    }
+
+    if(show_unmatched_only){
+      df <- df %>%
+        filter(is.na(group))
+    }
+
+    npg <- nrow(df)
+    npg <- ifelse(npg < 40, 40, 20)
+
+    if(is.null(df)){
+      return(NULL)
+    }else{
+      df <- df %>%
+        mutate(edit=ifelse(is.na(group),1,""))
+
+      reactable(df,
+                #selection = "single",
+                #onClick = "select",
+                sortable = F,
+                style = list(fontSize = "0.8rem"),
+                columns = list(
+                  group = colDef(name="Group"),
+                   Species = colDef(minWidth = 150),
+
+                  edit = colDef(
+                    name = "",
+                    sortable = FALSE,
+                    style = "border-right:none;border-top:none",
+                    cell = function(value){
+                      if(value==1){
+                        htmltools::tags$button("Edit")
+                      }else{
+                        ""
+                      }
+                    }
+
+                  )
+                ), # columns
+                defaultColDef = colDef(minWidth = 55, vAlign = "bottom"), # show=T,
+                compact = TRUE,
+                wrap = FALSE,
+                fullWidth = F,
+                resizable = F,
+                bordered = TRUE,
+                defaultPageSize = npg,
+                highlight = TRUE,
+                theme = reactableTheme(
+                  headerStyle = list(background = "#f7f7f8"),
+                  cellPadding = "1px 1px"
+                ),
+                onClick = JS("function(rowInfo, column) {
+    // Only handle click events on the 'details' column
+    if (column.id !== 'edit') {
+      return
+    }
+
+    // Display an alert dialog with details for the row
+    // window.alert('Details for row ' + rowInfo.values(1) + rowInfo.index + ':\\n' + JSON.stringify(rowInfo.values, null, 2))
+
+    window.alert('edit functionality coming...')
+
+    // Send the click event to Shiny, which will be available in input$show_details
+    // Note that the row index starts at 0 in JavaScript, so we add 1
+    if (window.Shiny) {
+      Shiny.setInputValue('edit_species', { index: rowInfo.index + 1 }, { priority: 'event' })
+    }
+  }"))
+    }
+
+  })
+
+  reactive({
+    input$edit_species
+    cat(paste0(input$edit_species,"\n"))
+  })
+
+
+  matched_spec <- reactive({
+    req(ambi_res())
+
+    df <- ambi_res()[["matched"]]
+
+    df <- df %>%
+      distinct(Species, group, RA) %>%
+      arrange(Species)
+
+    return(df)
+  })
+
+
+
+
+  output$chkUnmatched <- renderUI({
+
+    req(ambi_res())
+
+    tagList(checkboxInput(
+        "unmatched",
+        "Show only unrecognized species",
+        FALSE
+      ))
+  })
+
+
+  ambi_res <- reactive({
+
+    req(obs_data())
+
+    df <- obs_data()$df
+
+    if("Replicate" %in% names(df)){
+      var_rep <- "Replicate"
+    }else{
+      var_rep <- NA_character_
+    }
+    if("Station" %in% names(df)){
+      var_by <- c("Station")
+    }else{
+      var_by <- NULL
+    }
+
+    res <- ambiR::AMBI(df,
+                      var_rep = var_rep,
+                      var_species="Species",
+                      var_count = "Count",
+                      by=var_by)
+
+    df <- res$AMBI
+    df <- sort_results(df)
+    res$AMBI <- df
+
+    df <- res$AMBI_rep
+    if(!is.null(df)){
+      df <- sort_results(df)
+      res$AMBI_rep <- df
+    }
+
+    return(res)
+  })
+
+
+
+  ambi_selected <- reactive(getReactableState("tblAMBI", "selected"))
+
+  output$tblAMBIrep <- renderReactable({
+
+    req(ambi_res())
+
+    df_main <- ambi_res()[["AMBI"]]
+    df <- ambi_res()[["AMBI_rep"]]
+
+
+    if(is.null(df)){
+      return(NULL)
+    }else{
+
+    sel <- ambi_selected()
+
+    if("Station" %in% names(df_main)){
+      stns <- df_main$Station
+      sel <- ifelse(is.null(sel),"",stns[sel])
+    }else{
+      sel <- ""
+    }
+
+
+    pct_format <- colFormat(percent = TRUE, digits = 1)
+    pct_minwidth <- 60
+
+    reactable(df,
+              sortable = F,
+              #selection = "none",
+              onClick = "select",
+              style = list(fontSize = "0.8rem"),
+              columns = list(
+                AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
+                N = colDef(minWidth = 50),
+                S = colDef(minWidth = 50),
+                fNA = colDef(name="%NA", format=pct_format, minWidth = pct_minwidth),
+                I = colDef(format=pct_format, minWidth = pct_minwidth),
+                II = colDef(format=pct_format, minWidth = pct_minwidth),
+                III = colDef(format=pct_format, minWidth = pct_minwidth),
+                IV = colDef(format=pct_format, minWidth = pct_minwidth),
+                V = colDef(format=pct_format, minWidth = pct_minwidth)
+              ), # columns
+              rowStyle = function(index) {
+                if (df[index, "Station"] == sel) {
+                  list(fontWeight="bold", backgroundColor ="#c0d6e4" ) # "#f0f5f9" "hsl(233, 9%, 25%)")
+                }
+              },
+              defaultColDef = colDef(minWidth = 70, show=T, vAlign = "bottom"),
+              compact = TRUE,
+              wrap = FALSE,
+              fullWidth = F,
+              resizable = F,
+              bordered = TRUE,
+              defaultPageSize = 15,
+              highlight = TRUE,
+              theme = reactableTheme(
+                headerStyle = list(background = "#f7f7f8"),
+                rowSelectedStyle=list(backgroundColor = "#c0d6e4", color = "#000"),
+                cellPadding = "3px 1px"
+              )
+    )
+}
+  })
+
+
+  output$tblAMBI <- renderReactable({
+    req(ambi_res())
+
+    df <- ambi_res()[["AMBI"]]
+
+    pct_format <- colFormat(percent = TRUE, digits = 1)
+    pct_minwidth <- 60
+
+    reactable(df,
+              sortable = F,
+              selection = "single",
+              onClick = "select",
+              style = list(fontSize = "0.8rem"),
+              columns = list(
+                AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
+                N = colDef(minWidth = 50),
+                S = colDef(minWidth = 50),
+                H = colDef(format=colFormat(digits = 3), minWidth = 50),
+                fNA = colDef(name="%NA", format=pct_format, minWidth = pct_minwidth),
+                 I = colDef(format=pct_format, minWidth = pct_minwidth),
+                 II = colDef(format=pct_format, minWidth = pct_minwidth),
+                 III = colDef(format=pct_format, minWidth = pct_minwidth),
+                 IV = colDef(format=pct_format, minWidth = pct_minwidth),
+                 V = colDef(format=pct_format, minWidth = pct_minwidth)
+              ), # columns
+              defaultColDef = colDef(minWidth = 70, show=T, vAlign = "bottom"),
+              compact = TRUE,
+              wrap = FALSE,
+              fullWidth = F,
+              resizable = F,
+              bordered = TRUE,
+              defaultPageSize = 15,
+              highlight = TRUE,
+              theme = reactableTheme(
+                headerStyle = list(background = "#f7f7f8"),
+                rowSelectedStyle=list(backgroundColor = "#c0d6e4", color = "#000"),
+                cellPadding = "3px 1px"
+              )
+    )
+
+  })
+
 
   output$station_warning <- renderUI({
     ok <- stations_ok()[["ok"]]
@@ -398,354 +833,6 @@ function(input, output, session) {
     paste0("selected: ", input$stations_rows_selected)
   })
 
-
-  sheet_columns <- reactive({
-
-    df <- req(obs_data_raw())
-    use_head <- ifelse(is.null(input$hasHeader),
-                       TRUE,
-                       input$hasHeader)
-
-    if(use_head){
-      cols <- names(df)
-    }else{
-      cols <- 1:ncol(df)
-    }
-    cols <- c("none", cols)
-    return(cols)
-  })
-
-  sheet_rows <- reactive({
-
-    df <- req(obs_data_raw())
-    use_head <- ifelse(is.null(input$hasHeader),
-                       TRUE,
-                       input$hasHeader)
-
-    if(use_head){
-      rows <- 1:(nrow(df)-1)
-    }else{
-      rows <- 1:nrow(df)
-    }
-    rows <- c("none", rows)
-    return(rows)
-  })
-
-  obs_data_raw <- reactive({
-
-    req(xl_data())
-    df <- xl_data()
-    if(input$selectForm==label_long){
-      use_col_names <- ifelse(is.null(input$hasHeader),
-                              FALSE,
-                              input$hasHeader)
-    }else{
-      use_col_names <- FALSE
-    }
-
-    if(use_col_names){
-      columnnames <- df[1,] %>% unlist()
-      columnnames <- fix_column_names(columnnames)
-      names(df) <- columnnames
-      df <- df[2:nrow(df),]
-    }
-
-      return(df)
-
-  })
-
-
-  output$observationsraw <-renderReactable({
-
-    #req(stations_ok())
-    #req(stations())
-    req(obs_data_raw())
-
-    df <- obs_data_raw()
-
-    if(is.null(df)){
-      return(NULL)
-    }else{
-      reactable(df,
-                sortable = F,
-                style = list(fontSize = "0.8rem"),
-                columns = list(
-                  Kode = colDef(width = 60),
-                  CF = colDef(width = 30),
-                  SP = colDef(width = 30),
-                  NB = colDef(width = 30),
-                  Navn = colDef(width = 300)
-                ), # columns
-                defaultColDef = colDef(minWidth = 55, show=T, vAlign = "bottom"),
-                compact = TRUE,
-                wrap = FALSE,
-                fullWidth = T,
-                resizable = TRUE,
-                bordered = TRUE,
-                defaultPageSize = 999,
-                highlight = TRUE,
-                theme = reactableTheme(
-                  headerStyle = list(background = "#f7f7f8"),
-                  cellPadding = "1px 1px"
-                ))
-    }
-  })
-
-
-
-  obs_data <- reactive({
-    req(obs_data_raw())
-    df <- obs_data_raw()
-
-
-    dropped <- 0
-    msg <- ""
-
-    if(input$selectForm==label_long){
-      # browser()
-      cols <- c(input$colrowStn,
-                input$colrowRep,
-                input$colrowSpec,
-                input$colrowCount
-      )
-      cols <- cols[cols!="none"]
-      if(length(cols)>0){
-        if(!input$hasHeader){
-          cols <- as.numeric(cols)
-        }
-
-        df <- df[,cols]
-      }else{
-        return(NULL)
-      }
-    }else if(input$selectForm==label_wide_species){
-
-      row_spec <- as.numeric(input$colrowSpec)
-
-      if(is.na(row_spec)){
-        return(NULL)
-      }else{
-        group_vars <- c("Species")
-
-        species <- df[row_spec,] %>% unlist()
-        col_stn <- input$colrowStn
-        col_rep <- input$colrowRep
-        cols_keep <- 1:ncol(df)
-        rows_keep <- 1:nrow(df)
-        if(col_rep!="none"){
-          group_vars <- c("Replicate", group_vars)
-          species[names(df)==col_rep] <- "Replicate"
-        }
-        if(col_stn!="none"){
-          group_vars <- c("Station", group_vars)
-          species[names(df)==col_stn] <- "Station"
-        }
-
-        cols_keep <- cols_keep[!is.na(species)]
-        rows_keep <- rows_keep[rows_keep!=row_spec]
-        names(df) <- species
-
-        na_cols <- 1:ncol(df)
-        na_cols <- na_cols[is.na(species)]
-
-        if(length(n)>0){
-          dropped <- df[,na_cols] %>% unlist()
-          dropped <- dropped %>%
-            as.numeric()
-          dropped <- dropped[!is.na(dropped)]
-          dropped <- length(dropped)
-          msg <- "missing species names"
-        }
-
-
-        cols_piv <- names(df)[!is.na(species)]
-        cols_piv <- cols_piv[!cols_piv %in% c("Station","Replicate")]
-        df <- df[rows_keep,cols_keep]
-        df <- df %>%
-           pivot_longer(cols=any_of(cols_piv), names_to="Species", values_to = "Count")
-
-        df <- df %>%
-          filter(!is.na(Count)) %>%
-          mutate(Count=as.numeric(Count))
-
-        df <- df %>%
-          group_by(across(all_of(group_vars))) %>%
-          summarise(Count=sum(Count,na.rm=T), .groups="drop")
-
-
-      }
-
-    }else if(input$selectForm==label_wide_station){
-
-      colSpec <- input$colrowSpec
-      ixcolSpec <- match(colSpec, names(df))
-
-      if(colSpec=="none"){
-        return(NULL)
-      }else{
-        row_stn <- as.numeric(input$colrowStn)
-        row_rep <- as.numeric(input$colrowRep)
-
-        if(is.na(row_stn) & is.na(row_rep)){
-
-          names(df) <- paste0("col_",1:ncol(df))
-          names(df)[ixcolSpec] <- "Species"
-
-          df <- df %>%
-            filter(!is.na(Species))
-
-          cols_piv <- 1:ncol(df)
-          cols_piv <- cols_piv[cols_piv!=ixcolSpec]
-          cols_piv <- names(df)[cols_piv]
-
-          df <- df %>%
-            pivot_longer(cols=all_of(cols_piv), names_to="Column", values_to = "Count")
-
-          df <- df %>%
-            filter(!is.na(Count)) %>%
-            mutate(Count = as.numeric(Count))
-
-          df <- df %>%
-            select(all_of(c("Species","Count")))
-
-          df <- df %>%
-            group_by(Species) %>%
-            summarise(Count=sum(Count, na.rm = T), .groups="drop")
-
-
-        }else{
-          #browser()
-          if(!is.na(row_stn)){
-            stns <- df[row_stn,] %>% unlist()
-          }else{
-            stns <- rep("", ncol(df))
-          }
-
-          if(!is.na(row_rep)){
-            reps <- df[row_rep,] %>% unlist()
-          }else{
-            reps <- rep("", ncol(df))
-          }
-
-          stns <- paste(stns, reps, sep="_")
-
-          names(df)[ixcolSpec] <- "Species"
-
-          df <- df %>%
-            filter(!is.na(Species))
-
-          names(df) <- stns
-          names(df)[ixcolSpec] <- "Species"
-          #rows_keep <- 1:nrow(df)
-          #rows_keep <- rows_keep[!rows_keep %in% c(row_stn, row_rep)]
-          #df <- df[rows_keep,]
-
-          cols_piv <- 1:ncol(df)
-          cols_piv <- cols_piv[cols_piv!=ixcolSpec]
-          cols_piv <- names(df)[cols_piv]
-
-
-          df <- df %>%
-            pivot_longer(cols=all_of(cols_piv), names_to="Station", values_to = "Count")
-
-          df <- df %>%
-            separate("Station", into = c("Station","Replicate"), sep="_")
-
-          for(i in 2:nrow(df)){
-            if(df[i,"Station"] == "NA"){
-              df[i,"Station"] <- df[i-1,"Station"]
-            }
-            if(df[i,"Replicate"] == "NA"){
-              df[i,"Replicate"] <- df[i-1,"Replicate"]
-            }
-          }
-
-          df <- df %>%
-            filter(!is.na(Count)) %>%
-            mutate(Count = as.numeric(Count))
-
-
-          if(is.na(row_stn)){
-            df <- df %>%
-              group_by(Replicate, Species) %>%
-              summarise(Count=sum(Count, na.rm = T), .groups="drop")
-
-            df <- df %>%
-              mutate(ord1 = factor(Replicate,
-                                   levels = str_sort(unique(Replicate), numeric = T),
-                                   ordered = T)) %>%
-              arrange(ord1, Species) %>%
-              select(-ord1)
-
-          }else{
-            if(is.na(row_rep)){
-              df <- df %>%
-                group_by(Station, Species) %>%
-                summarise(Count=sum(Count, na.rm = T), .groups="drop")
-
-              df <- df %>%
-                mutate(ord1 = factor(Station,
-                                     levels = str_sort(unique(Station), numeric = T),
-                                     ordered = T)) %>%
-                arrange(ord1, Species) %>%
-                select(-ord1)
-            }else{
-              df <- df %>%
-                mutate(ord1 = factor(Station,
-                                     levels = str_sort(unique(Station), numeric = T),
-                                     ordered = T)) %>%
-                mutate(ord2 = factor(Replicate,
-                                     levels = str_sort(unique(Replicate), numeric = T),
-                                     ordered = T)) %>%
-                arrange(ord1, ord2, Species) %>%
-                select(-ord1, -ord2)
-            }
-
-          }
-
-        }}
-    }
-
-    return(list("df"=df, "dropped"=dropped, "msg"=msg))
-  })
-
-
-
-  output$observations <-renderReactable({
-
-    #req(stations_ok())
-    #req(stations())
-    req(obs_data())
-
-    df <- obs_data()$df
-
-    if(is.null(df)){
-      return(NULL)
-    }else{
-      reactable(df,
-                sortable = F,
-                style = list(fontSize = "0.8rem"),
-                columns = list(
-                  Kode = colDef(width = 60),
-                  CF = colDef(width = 30),
-                  SP = colDef(width = 30),
-                  NB = colDef(width = 30),
-                  Navn = colDef(width = 300)
-                ), # columns
-                defaultColDef = colDef(minWidth = 55, show=T, vAlign = "bottom"),
-                compact = TRUE,
-                wrap = FALSE,
-                fullWidth = T,
-                resizable = TRUE,
-                bordered = TRUE,
-                defaultPageSize = 999,
-                highlight = TRUE,
-                theme = reactableTheme(
-                  headerStyle = list(background = "#f7f7f8"),
-                  cellPadding = "1px 1px"
-                ))
-    }
-  })
 
 
   output$btnDownloadInds <- downloadHandler(

@@ -9,8 +9,7 @@ page_navbar(
   nav_panel(title="Observations",
             icon = bsicons::bs_icon("file-earmark-arrow-up"),
 
-            layout_columns(col_widths = c(4,8),
-
+            layout_columns(col_widths = c(3,5),
 
             accordion(id="setup",
                       open = "Choose Excel file",
@@ -34,24 +33,7 @@ page_navbar(
                                          uiOutput("selectColumnRowRep"),
                                          uiOutput("selectColumnRowSpecies"),
                                          uiOutput("selectColumnRowCount"))
-
-                      )#,
-                      # accordion_panel(
-                      #   title = "Stations",
-                      #   icon = bsicons::bs_icon("geo-alt"), # sliders
-                      #   layout_columns(
-                      #     "", # reactableOutput("stations"),
-                      #     "", #reactableOutput("points_table"),
-                      #     col_widths = c(7,5)),
-                      #   uiOutput("station_warning")
-                      # )
-                      #,
-                      #accordion_panel(
-                      #  title = "Options",
-                      #  icon = bsicons::bs_icon("check2-square"), # calendar-date
-                      #  "Options"
-                      #),
-
+                      )
             ), # accordion
 
             accordion(id="setup2",
@@ -68,47 +50,45 @@ page_navbar(
                         reactableOutput("observations")
 
                       ),
+            ) # accordion
             ) # layout_columns
-            )),
-  nav_panel(title="Indices",
+            ),
+  nav_panel(title="Index calculations",
             icon = bsicons::bs_icon("calculator"),
-            accordion(id="calculations",
+
+            layout_columns(
+
+            accordion(id="species",
                       open = TRUE,
                       accordion_panel(
-                        title = "Index calculations",
-                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),  # bar-chart
-                        layout_columns(
-                          "","", #  reactableOutput("tbl_indices"),p(""),
-                          col_widths = c(11,1)),
-                        "", #uiOutput("comment_indices")
+                        title = "Species",
+                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                        verticalLayout(
+                          uiOutput("chkUnmatched"),
+                          reactableOutput("tblSpec")
+                        )
+                                            )  #   accordion_panel
+                      ), # accordion,
+            accordion(id="ambi",
+                      open = TRUE,
+                      verticalLayout(
+                        accordion_panel(
+                          title = "AMBI",
+                          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+
+                          reactableOutput("tblAMBI")
+
                         ),
                       accordion_panel(
-                        title = "Matched observations",
-                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),  # bar-chart
-                        layout_columns(
-                          "","", #reactableOutput("matched_obs"),p(""),
-                          col_widths = c(11,1))))
-            ),
+                        title = "AMBI Replicates",
+                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                            reactableOutput("tblAMBIrep")
+                          ) # accordion_panel
+                        )  # verticalLayout
+            ), # accordion
+            col_widths = c(3,5))),
 
-  # nav_panel(title="EQR Results",
-  #           icon = bsicons::bs_icon("bar-chart"),
-  #           accordion(id="eqr_results",
-  #                     open = TRUE,
-  #                     accordion_panel(
-  #                       title = "EQR Results",
-  #                       icon = bsicons::bs_icon("bar-chart"),  # bar-chart
-  #
-  #                       layout_columns(
-  #                         "", "",
-  #                                     # reactableOutput("tbl_eqr"),
-  #                                     #  downloadButton("btnDownloadInds" ,
-  #                                     #                 label=HTML("&nbsp;Download"),
-  #                                     #                 title=HTML("Download results"),
-  #                                     #                 icon=icon("download"),
-  #                                     #                 style="padding: 6px 15px 7px 15px;margin: 10px 0px 8px 0px;"),
-  #                                      col_widths = c(8,1))))
-  #
-  # ),
+
 
   nav_panel(title="Information",
             icon = bsicons::bs_icon("info-square"),

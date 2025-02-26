@@ -1,4 +1,291 @@
+sort_results <- function(df){
 
+  if("Replicate" %in% names(df)){
+    if("Station" %in% names(df)){
+      df <- df %>%
+        mutate(ord1 = factor(Station,
+                             levels = str_sort(unique(Station), numeric = T),
+                             ordered = T)) %>%
+        mutate(ord2 = factor(Replicate,
+                             levels = str_sort(unique(Replicate), numeric = T),
+                             ordered = T)) %>%
+        arrange(ord1, ord2) %>%
+        select(-ord1, -ord2)
+    }else{
+      df <- df %>%
+        mutate(ord1 = factor(Replicate,
+                             levels = str_sort(unique(Replicate), numeric = T),
+                             ordered = T)) %>%
+        arrange(ord1) %>%
+        select(-ord1)
+    }
+  }else{
+    df <- df %>%
+      mutate(ord1 = factor(Station,
+                           levels = str_sort(unique(Station), numeric = T),
+                           ordered = T)) %>%
+      arrange(ord1) %>%
+      select(-ord1)
+  }
+  return(df)
+}
+
+
+match_list<- function(list, s){
+
+  res <- NULL
+  for(si in s){
+    si <- tolower(si)
+    n <- nchar(si)
+    if(length(list)>0){
+      listmatch <- tolower(list)
+      listmatch  <- list[stringr::str_sub(listmatch ,1,n)==si]
+      if(length(listmatch )>0){
+        res <- listmatch[1]
+        break
+      }
+    }
+  }
+  return(res)
+}
+
+
+
+
+reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
+                        label_long, label_wide_species, label_wide_station,
+                        has_header){
+  dropped <- 0
+  msg <- ""
+  count_variable <- NA
+
+  if(form==label_long){
+
+    cols <- c(idStn,
+              idRep,
+              idSpec,
+              idCount)
+
+    colnames <- c("Station",
+                  "Replicate",
+                  "Species",
+                  "Count")
+
+    colnames <- colnames[cols!="none"]
+    cols <- cols[cols!="none"]
+    if(length(cols)>0){
+      if(!has_header){
+        cols <- as.numeric(cols)
+        for(i in 1:length(cols)){
+          names(df)[cols[i]] <- colnames[i]
+        }
+      }else{
+        if(!idCount %in% names(df)){
+          return(NULL)
+        }
+        for(i in 1:length(cols)){
+          names(df)[names(df)==cols[i]] <- colnames[i]
+          cols[i] <- colnames[i]
+        }
+      }
+      df <- df[,cols]
+      df <- df %>%
+        mutate(Count=as.numeric(Count))
+
+    }else{
+      return(NULL)
+    }
+  }else if(form==label_wide_species){
+
+    row_spec <- as.numeric(idSpec)
+
+    if(is.na(row_spec)){
+      return(NULL)
+    }else{
+      group_vars <- c("Species")
+
+      species <- df[row_spec,] %>% unlist()
+      col_stn <- idStn
+      col_rep <- idRep
+      cols_keep <- 1:ncol(df)
+      rows_keep <- 1:nrow(df)
+      if(col_rep!="none"){
+        group_vars <- c("Replicate", group_vars)
+        species[names(df)==col_rep] <- "Replicate"
+      }
+      if(col_stn!="none"){
+        group_vars <- c("Station", group_vars)
+        species[names(df)==col_stn] <- "Station"
+      }
+
+      cols_keep <- cols_keep[!is.na(species)]
+      rows_keep <- rows_keep[rows_keep!=row_spec]
+      names(df) <- species
+
+      na_cols <- 1:ncol(df)
+      na_cols <- na_cols[is.na(species)]
+
+      if(length(n)>0){
+        dropped <- df[,na_cols] %>% unlist()
+        dropped <- dropped %>%
+          as.numeric()
+        dropped <- dropped[!is.na(dropped)]
+        dropped <- length(dropped)
+        msg <- "missing species names"
+      }
+
+
+      cols_piv <- names(df)[!is.na(species)]
+      cols_piv <- cols_piv[!cols_piv %in% c("Station","Replicate")]
+      df <- df[rows_keep,cols_keep]
+      df <- df %>%
+        pivot_longer(cols=any_of(cols_piv), names_to="Species", values_to = "Count")
+
+      df <- df %>%
+        filter(!is.na(Count)) %>%
+        mutate(Count=as.numeric(Count))
+
+      df <- df %>%
+        group_by(across(all_of(group_vars))) %>%
+        summarise(Count=sum(Count,na.rm=T), .groups="drop")
+
+
+    }
+
+  }else if(form==label_wide_station){
+
+    colSpec <- idSpec
+    ixcolSpec <- match(colSpec, names(df))
+
+    if(colSpec=="none"){
+      return(NULL)
+    }else{
+      row_stn <- as.numeric(idStn)
+      row_rep <- as.numeric(idRep)
+
+      if(is.na(row_stn) & is.na(row_rep)){
+
+        names(df) <- paste0("col_",1:ncol(df))
+        names(df)[ixcolSpec] <- "Species"
+
+        df <- df %>%
+          filter(!is.na(Species))
+
+        cols_piv <- 1:ncol(df)
+        cols_piv <- cols_piv[cols_piv!=ixcolSpec]
+        cols_piv <- names(df)[cols_piv]
+
+        df <- df %>%
+          pivot_longer(cols=all_of(cols_piv), names_to="Column", values_to = "Count")
+
+        df <- df %>%
+          filter(!is.na(Count)) %>%
+          mutate(Count = as.numeric(Count))
+
+        df <- df %>%
+          select(all_of(c("Species","Count")))
+
+        df <- df %>%
+          group_by(Species) %>%
+          summarise(Count=sum(Count, na.rm = T), .groups="drop")
+
+
+      }else{
+        #browser()
+        if(!is.na(row_stn)){
+          stns <- df[row_stn,] %>% unlist()
+        }else{
+          stns <- rep("", ncol(df))
+        }
+
+        if(!is.na(row_rep)){
+          reps <- df[row_rep,] %>% unlist()
+        }else{
+          reps <- rep("", ncol(df))
+        }
+
+        stns <- paste(stns, reps, sep="_")
+
+        names(df)[ixcolSpec] <- "Species"
+
+        df <- df %>%
+          filter(!is.na(Species))
+
+        names(df) <- stns
+        names(df)[ixcolSpec] <- "Species"
+        #rows_keep <- 1:nrow(df)
+        #rows_keep <- rows_keep[!rows_keep %in% c(row_stn, row_rep)]
+        #df <- df[rows_keep,]
+
+        cols_piv <- 1:ncol(df)
+        cols_piv <- cols_piv[cols_piv!=ixcolSpec]
+        cols_piv <- names(df)[cols_piv]
+
+
+        df <- df %>%
+          pivot_longer(cols=all_of(cols_piv), names_to="Station", values_to = "Count")
+
+        df <- df %>%
+          separate("Station", into = c("Station","Replicate"), sep="_")
+
+        for(i in 2:nrow(df)){
+          if(df[i,"Station"] == "NA"){
+            df[i,"Station"] <- df[i-1,"Station"]
+          }
+          if(df[i,"Replicate"] == "NA"){
+            df[i,"Replicate"] <- df[i-1,"Replicate"]
+          }
+        }
+
+        df <- df %>%
+          filter(!is.na(Count)) %>%
+          mutate(Count = as.numeric(Count))
+
+
+        if(is.na(row_stn)){
+          df <- df %>%
+            group_by(Replicate, Species) %>%
+            summarise(Count=sum(Count, na.rm = T), .groups="drop")
+
+          df <- df %>%
+            mutate(ord1 = factor(Replicate,
+                                 levels = str_sort(unique(Replicate), numeric = T),
+                                 ordered = T)) %>%
+            arrange(ord1, Species) %>%
+            select(-ord1)
+
+        }else{
+          if(is.na(row_rep)){
+            df <- df %>%
+              group_by(Station, Species) %>%
+              summarise(Count=sum(Count, na.rm = T), .groups="drop")
+
+            df <- df %>%
+              mutate(ord1 = factor(Station,
+                                   levels = str_sort(unique(Station), numeric = T),
+                                   ordered = T)) %>%
+              arrange(ord1, Species) %>%
+              select(-ord1)
+          }else{
+            df <- df %>%
+              mutate(ord1 = factor(Station,
+                                   levels = str_sort(unique(Station), numeric = T),
+                                   ordered = T)) %>%
+              mutate(ord2 = factor(Replicate,
+                                   levels = str_sort(unique(Replicate), numeric = T),
+                                   ordered = T)) %>%
+              arrange(ord1, ord2, Species) %>%
+              select(-ord1, -ord2)
+          }
+
+        }
+
+      }}
+  }
+
+  return(list("df"=df, "dropped"=dropped, "msg"=msg))
+
+}
 
 fix_column_names<- function(s){
 

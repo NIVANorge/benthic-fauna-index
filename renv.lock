@@ -30,6 +30,26 @@
       ],
       "Hash": "e7bdd9ee90e96921ca8a0f1972d66682"
     },
+    "ambiR": {
+      "Package": "ambiR",
+      "Version": "0.1.0",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteRepo": "ambiR",
+      "RemoteUsername": "NIVA-Denmark",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "3fbad32eae403e12a61e4fb1a4b72c93865cec0b",
+      "Requirements": [
+        "R",
+        "cli",
+        "dplyr",
+        "magrittr",
+        "tidyr",
+        "utils"
+      ],
+      "Hash": "a2db3d2f989f7470a39e55bc99b08499"
+    },
     "base64enc": {
       "Package": "base64enc",
       "Version": "0.1-3",
@@ -576,6 +596,20 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "cbff1b666c6fa6d21202f07e2318d4f1"
+    },
+    "remotes": {
+      "Package": "remotes",
+      "Version": "2.5.0",
+      "Source": "Repository",
+      "Repository": "RSPM",
+      "Requirements": [
+        "R",
+        "methods",
+        "stats",
+        "tools",
+        "utils"
+      ],
+      "Hash": "3ee025083e66f18db6cf27b56e23e141"
     },
     "renv": {
       "Package": "renv",
