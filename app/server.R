@@ -8,9 +8,11 @@ library(htmltools)
 library(openxlsx)
 library(ambiR)
 library(stringr)
+library(shinyjs)
 
 
 source("functions.R")
+
 
 
 # status class boundaries
@@ -24,6 +26,7 @@ function(input, output, session) {
   label_wide_station <-  "wide (stations in columns)"
 
   vals <- reactiveValues()
+
 
   xl_sheets <- reactive({
     file <- input$file1
@@ -152,6 +155,7 @@ function(input, output, session) {
       )
 
     }
+
 
   })
 
@@ -547,8 +551,7 @@ function(input, output, session) {
                         return { backgroundColor:'rgba(255, 0, 0, 0.1)'  }
                       }
                     }
-                  ")
-
+                  ") #,cell = function(value) {em(value)}
                  ),
                   group = colDef(name="Group",
                                  minWidth = 70,
@@ -720,12 +723,14 @@ function(input, output, session) {
 
   change_group <- function( selected=NULL, species=NA) {
     modalDialog(
+      size = "s",
       # paste0(ifelse(is.na(species),"select",
       #               tags$em(species)), " group:"),
+      tags$p(tags$em(species)),
       tags$div(
         tags$table(
           tags$tr(
-            tags$td(valign="top", tags$em(species)," group: ", style="padding:8px"),
+            tags$td(valign="top", "group: ", style="padding:8px"),
             tags$td(valign="top",
               selectInput(
                 "new_group",
@@ -742,12 +747,119 @@ function(input, output, session) {
           )
         )
       ),
+      tags$div(
+        tags$table(
+          tags$tr(
+            tags$td(width="50%",
+              reactableOutput("tblSimilar")
+              ),tags$td("")))),
       footer = tagList(
         actionButton("change", "Apply"),
         modalButton("Cancel")
       )
     )
   }
+
+
+  match_row <- reactive({
+
+
+    df_list <- ambiR::AMBI_species()
+    df <- species_displayed()
+    ix <- input$edit_species %>% unlist()
+    if(ix>0){
+
+      speciesi <- df[ix,"Species"] %>% unlist()
+
+      speciesi <- strsplit(speciesi, " ") %>% unlist()
+      speciesi <- speciesi[1]
+
+      df_match <- data.frame(species = speciesi, X="X")
+
+      df <- df_list %>%
+        bind_rows(df_match) %>%
+        dplyr::arrange(species) %>%
+        mutate(ix=row_number())
+
+      n <- df %>%
+        filter(X=="X") %>%
+        pull(ix)
+
+      n <- # floor(n / page_size)
+
+      return(n)
+
+    }
+  })
+
+
+
+
+  output$tblSimilar <- renderReactable({
+
+
+    df <- species_displayed()
+    ix <- input$edit_species %>% unlist()
+    if(ix>0){
+      RA <- df[ix,"RA"]
+    }else{
+        RA <- NA
+      }
+      if(is.na(RA)){
+
+        df_list <- ambiR::AMBI_species()
+
+        n <- match_row()
+        n1 <- n-5
+        n1 <- ifelse(n1<1,1,n1)
+        n2 <- n+100
+        n2 <- ifelse(n2>nrow(df_list),nrow(df_list),n2)
+
+        df_list <- df_list[n1:n2,]
+
+        res <- reactable(df_list,
+                  sortable = F,
+                  style = list(fontSize = "0.7rem"),
+                  columns = list(
+                    species = colDef(name="Species",
+                                     minWidth = 200,
+                                     #cell = function(value) {em(value)},
+                                     show=T),
+                    group = colDef(name="Group",
+                                   show=T,
+                                   minWidth = 50,
+                                   cell = function(value){
+                                     if(is.na(value)){
+                                       val <- ""
+                                     }else{
+                                       value = value + 1
+                                       val <- c("none","I","II","III","IV","V")[value]
+                                     }
+                                     return(val)
+                                   },
+                    )
+                  ), # columns
+                  defaultColDef = colDef(minWidth = 70, show=F, vAlign = "bottom"),
+                  compact = TRUE,
+                  wrap = FALSE,
+                  fullWidth = F,
+                  resizable = F,
+                  bordered = TRUE,
+                  defaultPageSize = 10,
+                  highlight = F,
+                  theme = reactableTheme(
+                    headerStyle = list(background = "#f7f7f8"),
+                    rowSelectedStyle=list(backgroundColor = "#c0d6e4", color = "#000"),
+                    cellPadding = "3px 1px"
+                  )
+        )
+
+      }else{
+        res <- NULL
+      }
+    res
+})
+
 
   observeEvent(input$change, {
 
@@ -785,7 +897,16 @@ function(input, output, session) {
 
   })
 
+  observe({
+    res <- ambi_res()
 
+    if(is.null(res$AMBI)){
+      # disable the downdload button on page load
+      shinyjs::hide("btnDownloadInds")
+    }else{
+      shinyjs::show("btnDownloadInds")
+    }
+  })
 
 
 
@@ -960,28 +1081,25 @@ function(input, output, session) {
   output$btnDownloadInds <- downloadHandler(
 
     filename = function() {
-      paste0("download ",format.Date(Sys.time(),
-                                     "%Y%m%d_%H%M%S"), ".xlsx")
-
-
-
+      paste0("download ",
+             format.Date(Sys.time(),
+                         "%Y%m%d_%H%M%S"),
+             ".xlsx")
     },
     content = function(file) {
 
-      progress <- Progress$new(session, min=1, max=10)
-      on.exit(progress$close())
+      res <- isolate(ambi_res())
 
-      progress$set(message = 'Preparing download',
-                   detail = "please wait...")
+        progress <- Progress$new(session, min=1, max=10)
+        on.exit(progress$close())
 
-      # wb<- excel_results(df_indices(),
-      #                     matched_obs(),
-      #                    results_eqr_tab())
+        progress$set(message = 'Preparing download',
+                     detail = "please wait...")
 
-      saveWorkbook(wb, file = file, overwrite = TRUE)
+        wb <- excel_results(res)
 
+        saveWorkbook(wb, file = file, overwrite = TRUE)
     }
   )
-
 
 }

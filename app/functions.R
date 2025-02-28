@@ -467,7 +467,8 @@ eqr_for_table <- function(dfEQR, dfstn){
 }
 
 
-excel_results <- function(dfi, dfobs, dfeqr){
+excel_results <- function(ambi_res){
+
   wb <- createWorkbook()
 
   hs1 <- createStyle(textDecoration = "Bold")
@@ -477,14 +478,33 @@ excel_results <- function(dfi, dfobs, dfeqr){
 
 
   # -----------------------------------------
-  id <- "EQR"
+  id <- "AMBI"
   addWorksheet(wb, id)
 
-  dfeqr <- dfeqr %>%
-    select(-classID)
+  df <- ambi_res$AMBI
 
-  writeData(wb, id, dfeqr, headerStyle = hs1)
+  writeData(wb, id, df, headerStyle = hs1)
 
+  df <- ambi_res$AMBI_rep
+
+  if(!is.null(df)){
+    id <- "AMBI Replicates"
+    addWorksheet(wb, id)
+    writeData(wb, id, df, headerStyle = hs1)
+  }
+
+  df <- ambi_res$matched
+
+  if(!is.null(df)){
+    id <- "matched"
+    addWorksheet(wb, id)
+    writeData(wb, id, df, headerStyle = hs1)
+  }
+
+
+  # -----------------------------------------
+
+  if(F){
   nr <- 1 + nrow(dfeqr)
 
   colnames <- c("EQR")
@@ -539,7 +559,7 @@ excel_results <- function(dfi, dfobs, dfeqr){
 
 
   freezePane(wb, id, firstRow = TRUE)
-
+  }
   return(wb)
 }
 

@@ -2,14 +2,18 @@ library(shiny)
 library(bslib)
 library(bsicons)
 library(reactable)
+library(shinyjs)
 
+tagList(
+  useShinyjs(),
 page_navbar(
   title = "Benthic fauna index calculations",
   id = "page",
   nav_panel(title="Observations",
+
             icon = bsicons::bs_icon("file-earmark-arrow-up"),
 
-            layout_columns(col_widths = c(3,5),
+            layout_columns(col_widths = c(3,7),
 
             accordion(id="setup",
                       open = "Choose Excel file",
@@ -28,11 +32,11 @@ page_navbar(
                         title = "Columns and rows",
                         icon = bsicons::bs_icon("file-earmark-spreadsheet"),  # bar-chart
 
-                          verticalLayout(uiOutput("checkHeader"),
-                                         uiOutput("selectColumnRowStn"),
-                                         uiOutput("selectColumnRowRep"),
-                                         uiOutput("selectColumnRowSpecies"),
-                                         uiOutput("selectColumnRowCount"))
+                        verticalLayout(uiOutput("checkHeader"),
+                                       uiOutput("selectColumnRowStn"),
+                                       uiOutput("selectColumnRowRep"),
+                                       uiOutput("selectColumnRowSpecies"),
+                                       uiOutput("selectColumnRowCount"))
                       )
             ), # accordion
 
@@ -43,64 +47,59 @@ page_navbar(
                         title = "Observations",
                         icon = bsicons::bs_icon("file-earmark-spreadsheet"),  # bar-chart
                         reactableOutput("observationsraw")
-                      ) #,
-                      # accordion_panel(
-                      #   id = "panel_obs_transp",
-                      #   title = "Observations transposed",
-                      #   icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-                      #   uiOutput("obs_warning") ,
-                      #   reactableOutput("observations")
-                      # ),
+                      )
             ) # accordion
             ) # layout_columns
-            ),
+  ),
   nav_panel(title="Index calculations",
             icon = bsicons::bs_icon("calculator"),
 
             layout_columns(
 
-            accordion(id="species",
-                      open = TRUE,
-                      accordion_panel(
-                        title = "Species summary",
-                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-                        verticalLayout(
-                          reactableOutput("tblSpecCount")
-                        )
-                      ),  #   accordion_panel
-                      accordion_panel(
-                        title = "Species",
-                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-                        verticalLayout(
-                          uiOutput("chkUnmatched"),
-                          reactableOutput("tblSpec")
-                        )
-                      )  #   accordion_panel
-
-                      ), # accordion,
-            accordion(id="ambi",
-                      open = TRUE,
-                      verticalLayout(
+              accordion(id="species",
+                        open = TRUE,
                         accordion_panel(
-                          title = "AMBI",
+                          title = "Species summary",
                           icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                          verticalLayout(
+                            reactableOutput("tblSpecCount")
+                          )
+                        ),  #   accordion_panel
+                        accordion_panel(
+                          title = "Species",
+                          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                          verticalLayout(
+                            uiOutput("chkUnmatched"),
+                            reactableOutput("tblSpec")
+                          )
+                        )  #   accordion_panel
 
-                          reactableOutput("tblAMBI")
+              ), # accordion,
+              accordion(id="ambi",
+                        open = TRUE,
+                        verticalLayout(
+                          accordion_panel(
+                            title = "AMBI",
+                            icon = bsicons::bs_icon("file-earmark-spreadsheet"),
 
-                        ),
-                      accordion_panel(
-                        title = "AMBI Replicates",
-                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                            reactableOutput("tblAMBI")
+
+                          ),
+                          accordion_panel(
+                            title = "AMBI Replicates",
+                            icon = bsicons::bs_icon("file-earmark-spreadsheet"),
                             reactableOutput("tblAMBIrep")
                           ) # accordion_panel
                         )  # verticalLayout
-            ), # accordion
+              ), # accordion
 
-            verticalLayout(
-              p("")
-              # downloadButton("btnDownloadInds", "Download")
+              verticalLayout(
+                shinyjs::hidden(
+                  downloadButton("btnDownloadInds", "")
             ),
-            col_widths = c(3,5,4))),
+            p("")
+            ),
+            col_widths = c(4,7,1))),
 
 
 
@@ -109,5 +108,5 @@ page_navbar(
             "Information"
             )
 )
-
+)
 

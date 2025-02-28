@@ -18,6 +18,7 @@ packages <- c(
   'openxlsx',
   'remotes',
   'stringr',
+  'shinyjs',
   '')
 options(Ncpus = -1)
 for (pkg in packages) {
