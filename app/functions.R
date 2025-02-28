@@ -1225,11 +1225,10 @@ observation_info <- function(df, options,
 
 read_excel_sheet <- function(sheet, xl_path, header=F){
   require(readxl)
-  df <- readxl::read_excel(sheet=sheet, path=xl_path,
-                           col_names=header, col_types = "text",
-                           .name_repair = "unique"
-                           #.name_repair = .repair_nms
-                           )
+
+  df <- suppressMessages(readxl::read_excel(sheet=sheet, path=xl_path,
+                            col_names=header, col_types = "text",
+                            .name_repair = "unique"))
 
   return(df)
 }

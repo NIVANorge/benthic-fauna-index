@@ -37,9 +37,9 @@
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "ambiR",
-      "RemoteUsername": "NIVA-Denmark",
+      "RemoteUsername": "niva-denmark",
       "RemoteRef": "HEAD",
-      "RemoteSha": "3fbad32eae403e12a61e4fb1a4b72c93865cec0b",
+      "RemoteSha": "ada7a6964b89ab0d2dc5a2354e2d8ebc6c7e7dbe",
       "Requirements": [
         "R",
         "cli",
@@ -48,7 +48,7 @@
         "tidyr",
         "utils"
       ],
-      "Hash": "a2db3d2f989f7470a39e55bc99b08499"
+      "Hash": "6de807edb6b87d566f4c6f1a99b09fae"
     },
     "base64enc": {
       "Package": "base64enc",

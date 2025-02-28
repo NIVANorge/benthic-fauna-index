@@ -9,7 +9,7 @@ page_navbar(
   nav_panel(title="Observations",
             icon = bsicons::bs_icon("file-earmark-arrow-up"),
 
-            layout_columns(col_widths = c(5,7),
+            layout_columns(col_widths = c(3,5),
 
             accordion(id="setup",
                       open = "Choose Excel file",
@@ -39,17 +39,18 @@ page_navbar(
             accordion(id="setup2",
                       open = "Observations",
                       accordion_panel(
+                        id = "panel_obs",
                         title = "Observations",
                         icon = bsicons::bs_icon("file-earmark-spreadsheet"),  # bar-chart
                         reactableOutput("observationsraw")
-                      ),
-                      accordion_panel(
-                        title = "Observations transposed",
-                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-                        uiOutput("obs_warning") ,
-                        reactableOutput("observations")
-
-                      ),
+                      ) #,
+                      # accordion_panel(
+                      #   id = "panel_obs_transp",
+                      #   title = "Observations transposed",
+                      #   icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                      #   uiOutput("obs_warning") ,
+                      #   reactableOutput("observations")
+                      # ),
             ) # accordion
             ) # layout_columns
             ),
@@ -61,13 +62,21 @@ page_navbar(
             accordion(id="species",
                       open = TRUE,
                       accordion_panel(
+                        title = "Species summary",
+                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                        verticalLayout(
+                          reactableOutput("tblSpecCount")
+                        )
+                      ),  #   accordion_panel
+                      accordion_panel(
                         title = "Species",
                         icon = bsicons::bs_icon("file-earmark-spreadsheet"),
                         verticalLayout(
                           uiOutput("chkUnmatched"),
                           reactableOutput("tblSpec")
                         )
-                                            )  #   accordion_panel
+                      )  #   accordion_panel
+
                       ), # accordion,
             accordion(id="ambi",
                       open = TRUE,
@@ -86,7 +95,12 @@ page_navbar(
                           ) # accordion_panel
                         )  # verticalLayout
             ), # accordion
-            col_widths = c(5,7))),
+
+            verticalLayout(
+              p("")
+              # downloadButton("btnDownloadInds", "Download")
+            ),
+            col_widths = c(3,5,4))),
 
 
 
