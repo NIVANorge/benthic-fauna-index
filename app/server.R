@@ -789,7 +789,49 @@ function(input, output, session) {
     }
   })
 
+  observeEvent(input$new_group, {
 
+    action_manual <- isolate(vals$manual)
+
+    if(is.null(action_manual)){
+      action_manual <- TRUE
+    }
+
+    if(action_manual){
+      updateReactable(
+        outputId = "tblSimilar",
+        selected = NA
+      )
+    }else{
+      action_manual <- TRUE
+    }
+
+    vals$manual <- action_manual
+
+  })
+
+
+  observeEvent(input$choose_species, {
+
+    row <- input$choose_species %>% unlist()
+
+    rowid <- row[1]
+    grp <- row[2]
+
+    vals$manual <- FALSE
+
+    updateSelectInput(
+      inputId = "new_group",
+      selected = grp
+    )
+
+    updateReactable(
+      outputId = "tblSimilar",
+      selected = rowid
+    )
+
+
+  })
 
 
   output$tblSimilar <- renderReactable({
@@ -815,6 +857,7 @@ function(input, output, session) {
         df_list <- df_list[n1:n2,]
 
         res <- reactable(df_list,
+                         selection = "single",
                   sortable = F,
                   style = list(fontSize = "0.7rem"),
                   columns = list(
@@ -845,12 +888,15 @@ function(input, output, session) {
                   resizable = F,
                   bordered = TRUE,
                   defaultPageSize = 10,
-                  highlight = F,
+                  highlight = T,
                   theme = reactableTheme(
                     headerStyle = list(background = "#f7f7f8"),
                     rowSelectedStyle=list(backgroundColor = "#c0d6e4", color = "#000"),
                     cellPadding = "3px 1px"
-                  )
+                  ),
+                  onClick = JS("function(rowInfo) {
+Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInfo.values['group']}, { priority: 'event' })
+                               }")  # group: rowInfo.values['group'] #
         )
 
       }else{
