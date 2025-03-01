@@ -855,7 +855,18 @@ function(input, output, session) {
         )
 
       }else{
-        res <- NULL
+        res <- reactable(data=data.frame(x=""),
+                         columns=list(x=colDef(name="")),
+                         sortable = F,
+                         onClick = NULL,
+                         compact = TRUE,
+                         wrap = FALSE,
+                         fullWidth = F,
+                         resizable = F,
+                         bordered = F,
+                         defaultPageSize = 10,
+                         highlight = F
+                         )
       }
     res
 })

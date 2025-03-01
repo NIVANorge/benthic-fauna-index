@@ -466,6 +466,17 @@ eqr_for_table <- function(dfEQR, dfstn){
 
 }
 
+# "AMBI"     "AMBI_rep" "matched"  "warnings"
+
+# "Station" "AMBI"    "H"       "S"       "fNA"     "N"
+# "I"       "II"      "III"     "IV"      "V"
+
+# "Station" "Replicate" "AMBI"  "S"       "fNA"     "N"
+# "I"       "II"      "III"     "IV"      "V"
+
+# "Station"   "Replicate" "Species"   "Count"     "group"     "RA"
+
+
 
 excel_results <- function(ambi_res){
 
@@ -475,6 +486,7 @@ excel_results <- function(ambi_res){
 
   style_nr1 <- createStyle(numFmt = "0.0")
   style_nr3 <- createStyle(numFmt = "0.000")
+  style_pct <- createStyle(numFmt = "0.00%")
 
 
   # -----------------------------------------
@@ -482,8 +494,32 @@ excel_results <- function(ambi_res){
   addWorksheet(wb, id)
 
   df <- ambi_res$AMBI
+  nr <- 1 +nrow(df)
 
   writeData(wb, id, df, headerStyle = hs1)
+
+  #openxlsx::setColWidths(wb, id, cols = 1:ncol(df), widths = "auto")
+
+  colnames <- c("AMBI", "H")
+  for(icol in colnames){
+    i <- which(tolower(names(df))==tolower(icol))
+    openxlsx::addStyle(wb, id, style_nr3, cols = i, rows=(2:nr))
+    openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+  }
+
+  colnames <- c("N", "S")
+  for(icol in colnames){
+    i <- which(tolower(names(df))==tolower(icol))
+    openxlsx::setColWidths(wb, id, cols = i, widths = 5)
+  }
+
+  colnames <- c("fNA","I", "II", "III", "IV","V" )
+  for(icol in colnames){
+    i <- which(tolower(names(df))==tolower(icol))
+    openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+    openxlsx::addStyle(wb, id, style_pct, cols = i, rows=(2:nr))
+  }
+
 
   df <- ambi_res$AMBI_rep
 
@@ -491,14 +527,53 @@ excel_results <- function(ambi_res){
     id <- "AMBI Replicates"
     addWorksheet(wb, id)
     writeData(wb, id, df, headerStyle = hs1)
+    nr <- 1 + nrow(df)
+
+    #openxlsx::setColWidths(wb, id, cols = 1:ncol(df), widths = "auto")
+
+
+    colnames <- c("N", "S")
+    for(icol in colnames){
+      i <- which(tolower(names(df))==tolower(icol))
+      openxlsx::setColWidths(wb, id, cols = i, widths = 5)
+    }
+
+    i <- which(tolower(names(df))==tolower("AMBI"))
+    openxlsx::addStyle(wb, id, style_nr3, cols = i, rows=(2:nr))
+    openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+
+    colnames <- c("fNA","I", "II", "III", "IV","V" )
+    for(icol in colnames){
+      i <- which(tolower(names(df))==tolower(icol))
+      openxlsx::addStyle(wb, id, style_pct, cols = i, rows=(2:nr))
+      openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+    }
+
   }
 
   df <- ambi_res$matched
 
   if(!is.null(df)){
+    names(df)[names(df)=="source"] <- "Source"
+    names(df)[names(df)=="group"] <- "Group"
+    names(df)[names(df)=="group"] <- "Group"
+    names(df)[names(df)=="group_note"] <- "Group Note"
+
     id <- "matched"
     addWorksheet(wb, id)
     writeData(wb, id, df, headerStyle = hs1)
+    openxlsx::setColWidths(wb, id, cols = 1:ncol(df), widths = "auto")
+
+  }
+
+  df <- ambi_res$warnings
+
+  if(!is.null(df)){
+    id <- "warnings"
+    addWorksheet(wb, id)
+    writeData(wb, id, df, headerStyle = hs1)
+    openxlsx::setColWidths(wb, id, cols = 1:ncol(df), widths = "auto")
+
   }
 
 
