@@ -524,7 +524,9 @@ function(input, output, session) {
     }
 
     df <- df %>%
-      mutate(reset=edit)
+      mutate(reset=ifelse(is.na(group), 0,
+                          ifelse(is.na(group0),1,
+                                 ifelse(group0!=group, edit, 0))))
 
     npg <- nrow(df)
     if(npg>0){
@@ -541,18 +543,9 @@ function(input, output, session) {
                 #onClick = "select",
                 sortable = F,
                 style = list(fontSize = "0.8rem"),
+                #rowStyle =
                 columns = list(
-                  Species = colDef(minWidth = 150,
-                                                   style = JS("
-                    function(rowInfo, column, state) {
-                      if (rowInfo.values['RA'] == 1) {
-                        return { backgroundColor:'rgba(0, 0, 0, 0.1)'  }
-                      }else if (rowInfo.values['group0'] === null) {
-                        return { backgroundColor:'rgba(255, 0, 0, 0.1)'  }
-                      }
-                    }
-                  ") #,cell = function(value) {em(value)}
-                 ),
+                  Species = colDef(minWidth = 150),
                   group = colDef(name="Group",
                                  minWidth = 70,
                                  cell = function(value){
@@ -564,19 +557,22 @@ function(input, output, session) {
                                    }
                                    return(val)
                                  },
-                                 style = JS("
-                    function(rowInfo, column, state) {
-                      if (rowInfo.values['group'] != rowInfo.values['group0']) {
-                        return { backgroundColor: 'rgba(0, 0, 255, 0.05)', fontWeight: 'bold'}
-                      }
-                    }
-                  ")),
+                                 style=JS("function(rowInfo) {
+                      if(rowInfo.values['group'] != rowInfo.values['group0']){
+                        return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
+                      }else if(rowInfo.values['group0'] === null){
+                          return { backgroundColor:'rgba(255, 0, 0, 0.05)'  }
+                      }else{
+                          return
+                        }
+                      }")),
                   group0= colDef(show = F),
                   RA = colDef(show=F),
                   edit = colDef(
+                    headerStyle = "border-right:none;border-top:none;border-bottom:none;background:none;",
                     name = "",
                     sortable = FALSE,
-                    style = "border-right:none;border-top:none",
+                    style = "border-right:none;border-top:none;",
                     cell = function(value){
                       if(value==1){
                         htmltools::tags$button("Edit")
@@ -587,9 +583,10 @@ function(input, output, session) {
 
                   ),
                  reset = colDef(
+                   headerStyle = "border:none;background:none;",
                    name = "",
                    sortable = FALSE,
-                   style = "border-left:none;border-right:none;border-top:none",
+                   style = "border-left:none;border-right:none;border-top:none;",
                    cell = function(value){
                      if(value==1){
                        htmltools::tags$button("Reset")
@@ -840,6 +837,8 @@ function(input, output, session) {
                     )
                   ), # columns
                   defaultColDef = colDef(minWidth = 70, show=F, vAlign = "bottom"),
+                  paginationType = "simple",
+                  showPageInfo =F,
                   compact = TRUE,
                   wrap = FALSE,
                   fullWidth = F,
@@ -856,14 +855,18 @@ function(input, output, session) {
 
       }else{
         res <- reactable(data=data.frame(x=""),
-                         columns=list(x=colDef(name="")),
+                         columns=list(
+                           x=colDef(name="",
+                                    headerStyle = "border:none;background:none;",
+                                    style="border:none;background:none;")),
                          sortable = F,
                          onClick = NULL,
                          compact = TRUE,
                          wrap = FALSE,
                          fullWidth = F,
                          resizable = F,
-                         bordered = F,
+                         outlined = F,
+                         borderless = TRUE,
                          defaultPageSize = 10,
                          highlight = F
                          )
