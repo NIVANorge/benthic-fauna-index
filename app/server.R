@@ -133,14 +133,14 @@ function(input, output, session) {
     accordion_panel_open("setup","Observations")
     accordion_panel_open("setup","Columns and rows")
 
-    if(input$selectForm == label_long){
-      # browser()
+    accordion_panel_remove(
+      id="setup2",
+      "Observations transposed"
+    )
 
-      accordion_panel_remove(
-        id="setup2",
-        "Observations transposed"
-      )
-    }else{
+    if(input$selectForm != label_long){
+      # browser()
+    #}else{
       accordion_panel_insert(
         id="setup2",
         panel= accordion_panel(
@@ -436,7 +436,7 @@ function(input, output, session) {
     df <- obs_data()[["df"]]
 
     if(is.null(df)){
-      return(NULL)
+      return(reactable())
     }else{
       reactable(df,
                 sortable = F,
@@ -990,6 +990,10 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
 
     df <- obs_data()$df
+
+    if(!"Species" %in% names(df)){
+      return(NULL)
+    }
 
     if("Replicate" %in% names(df)){
       var_rep <- "Replicate"

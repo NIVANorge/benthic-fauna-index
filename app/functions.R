@@ -168,6 +168,10 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
         names(df) <- paste0("col_",1:ncol(df))
         names(df)[ixcolSpec] <- "Species"
 
+        if(!"Species" %in% names(df)){
+          return(NULL)
+        }
+
         df <- df %>%
           filter(!is.na(Species))
 
