@@ -318,6 +318,10 @@ function(input, output, session) {
 
     if(use_head){
       cols <- names(df)
+      if(input$selectForm!=label_long){
+        names(cols) <- as.character(1:length(cols))
+      }
+
     }else{
       cols <- 1:ncol(df)
     }
@@ -373,6 +377,18 @@ function(input, output, session) {
 
     df <- obs_data_raw()
 
+    show_head <- isolate(input$selectForm)
+
+    if(is.null(show_head)){
+      col_default <- colDef(minWidth = 55, show=T, vAlign = "bottom")
+    }else{
+      if(isolate(input$selectForm)==label_long){
+        col_default <- colDef(minWidth = 55, show=T, vAlign = "bottom")
+      }else{
+        col_default <- colDef(name="", minWidth = 55, show=T, vAlign = "bottom")
+      }
+    }
+
     if(is.null(df)){
       return(NULL)
     }else{
@@ -386,7 +402,7 @@ function(input, output, session) {
                   NB = colDef(width = 30),
                   Navn = colDef(width = 300)
                 ), # columns
-                defaultColDef = colDef(minWidth = 55, show=T, vAlign = "bottom"),
+                defaultColDef = col_default,
                 compact = TRUE,
                 wrap = FALSE,
                 fullWidth = T,
