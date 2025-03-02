@@ -139,7 +139,7 @@ function(input, output, session) {
     )
 
     if(input$selectForm != label_long){
-      # browser()
+      #
     #}else{
       accordion_panel_insert(
         id="setup2",
@@ -900,22 +900,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         )
 
       }else{
-        res <- reactable(data=data.frame(x=""),
-                         columns=list(
-                           x=colDef(name="",
-                                    headerStyle = "border:none;background:none;",
-                                    style="border:none;background:none;")),
-                         sortable = F,
-                         onClick = NULL,
-                         compact = TRUE,
-                         wrap = FALSE,
-                         fullWidth = F,
-                         resizable = F,
-                         outlined = F,
-                         borderless = TRUE,
-                         defaultPageSize = 10,
-                         highlight = F
-                         )
+        res <-empty_table()
       }
     res
 })
@@ -967,6 +952,170 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       shinyjs::show("btnDownloadInds")
     }
   })
+
+
+#  limits_AMBI = c(bad = 6, high = 0),
+#  limits_H = c(bad = 0, high = NA),
+#  limits_S = c(bad = 0, high = NA),
+#  bounds = c(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
+
+  output$chkMAMBI <- renderUI({
+
+    req(ambi_res())
+
+    tagList(checkboxInput(
+      "doMAMBI",
+      label="M-AMBI",
+      F #,
+#      width = "100%"
+    ))
+  })
+
+  observeEvent(input$doMAMBI, {
+
+    accordion_panel_remove(
+      id="acc_ambi","panel_mambi")
+
+    accordion_panel_remove(
+      id="acc_ambi" ,"M-AMBI"
+    )
+
+    show_mambi <- input$doMAMBI
+
+    show_mambi <- ifelse(is.null(show_mambi),F,show_mambi)
+
+    if(show_mambi==T){
+      accordion_panel_insert(
+        id="acc_ambi",
+        panel= accordion_panel(
+          title = "M-AMBI",
+          value = "panel_mambi",
+          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+          reactableOutput("tblMAMBI")
+        ),
+        target = "panel_ambi_rep",
+        position = "after"
+      )
+    }else{
+
+      accordion_panel_remove(
+        id="acc_ambi" ,"M-AMBI"
+        )
+    }
+
+  }, ignoreInit = TRUE, ignoreNULL=FALSE)
+
+
+  mambi_res <- reactive({
+
+    req(ambi_res())
+    # req(input$doMAMBI)
+    # doMAMBI <- input$doMAMBI
+    # doMAMBI <- ifelse(is.null(doMAMBI), F, doMAMBI)
+    # if(doMAMBI==F){
+    #   return(NULL)
+    # }else{
+
+    df <- ambi_res()[["AMBI"]]
+
+    bounds_mambi <- c(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
+
+    if(is.null(df)){
+      return(NULL)
+    }else{
+      by_var <- ifelse("Station" %in% names(df), "Station", NULL)
+      mambi <- ambiR::MAMBI(df, by=by_var, bounds = bounds_mambi)
+
+      mambi <- sort_results(mambi)
+
+      mambi <- mambi %>%
+        rowwise() %>%
+        mutate(Status=.class_names()[.classID(EQR)]) %>%
+        ungroup()
+
+
+      bounds<- data.frame(
+        Bounds=c("H/G","G/M","M/P","P/B"),
+        MAMBI = c(bounds_mambi["HG"], bounds_mambi["GM"],
+                  bounds_mambi["MP"], bounds_mambi["PB"]))
+
+      return(res=list("MAMBI"=mambi, "bounds"=bounds))
+    }
+    #}
+  })
+
+
+  output$tblMAMBI <- renderReactable({
+    req(mambi_res())
+
+    df <- mambi_res()$MAMBI
+
+    if(is.null(df)){
+      return(NULL)
+    }
+
+    df <- df %>%
+      rowwise() %>%
+      mutate(class_id=.classID(EQR)) %>%
+      ungroup()
+
+    class_colours <- .classcolors()
+
+    if(F){
+      # returns a vector of the five colours used to represent status classes
+      c('#FF0000','#FFC000','#FFFF00','#92D050','#00B0F0')
+    }
+
+    pct_format <- colFormat(percent = TRUE, digits = 1)
+    pct_minwidth <- 60
+
+    # Station
+    # Bounds AMBI H S x y z MAMBI EQR
+    reactable(df,
+              sortable = F,
+              style = list(fontSize = "0.8rem"),
+              columns = list(
+                AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
+                H = colDef(format=colFormat(digits = 3), minWidth = 50),
+                x = colDef(format=colFormat(digits = 3), minWidth = 50),
+                y = colDef(format=colFormat(digits = 3), minWidth = 50),
+                z = colDef(format=colFormat(digits = 3), minWidth = 50),
+                MAMBI = colDef(format=colFormat(digits = 3), minWidth = 70),
+                EQR = colDef(format=colFormat(digits = 3), minWidth = 50),
+                Status = colDef(style=JS("function(rowInfo) {
+                      if(rowInfo.values['class_id']==1){
+                        return { backgroundColor:'rgba(255, 0, 0, 0.5)'}
+                      }else if(rowInfo.values['class_id']==2){
+                          return { backgroundColor:'rgba(255, 192, 0, 0.5)'  }
+                      }else if(rowInfo.values['class_id']==3){
+                          return { backgroundColor:'rgba(255, 255, 0, 0.5)'  }
+                      }else if(rowInfo.values['class_id']==4){
+                          return { backgroundColor:'rgba(146, 208, 80, 0.5)'  }
+                      }else if(rowInfo.values['class_id']==5){
+                          return { backgroundColor:'rgba(0, 176, 240, 0.5)'  }
+                      }else{
+                          return
+                        }
+                      }")),
+                class_id=colDef(show=F)
+              ),
+              defaultColDef = colDef(minWidth = 60, show=T, vAlign = "bottom"),
+              compact = TRUE,
+              wrap = FALSE,
+              fullWidth = F,
+              resizable = F,
+              bordered = TRUE,
+              defaultPageSize = 15,
+              highlight = TRUE,
+              theme = reactableTheme(
+                headerStyle = list(background = "#f7f7f8"),
+                rowSelectedStyle=list(backgroundColor = "#c0d6e4", color = "#000"),
+                cellPadding = "3px 1px"
+              )
+    )
+
+  })
+
 
 
 
@@ -1039,7 +1188,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
 
     if(is.null(df)){
-      return(NULL)
+      return(empty_table())
     }else{
 
     sel <- ambi_selected()
@@ -1097,6 +1246,25 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 }
   })
 
+  empty_table<-function(){
+    reactable(data=data.frame(x=""),
+              columns=list(
+                x=colDef(name="",
+                         headerStyle = "border:none;background:none;",
+                         style="border:none;background:none;")),
+              sortable = F,
+              onClick = NULL,
+              compact = TRUE,
+              wrap = FALSE,
+              fullWidth = F,
+              resizable = F,
+              outlined = F,
+              borderless = TRUE,
+              defaultPageSize = 10,
+              highlight = F
+    )
+  }
+
 
   output$tblAMBI <- renderReactable({
     req(ambi_res())
@@ -1153,6 +1321,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     content = function(file) {
 
       res <- isolate(ambi_res())
+      res2 <- isolate(mambi_res())
 
         progress <- Progress$new(session, min=1, max=10)
         on.exit(progress$close())
@@ -1160,7 +1329,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         progress$set(message = 'Preparing download',
                      detail = "please wait...")
 
-        wb <- excel_results(res)
+        wb <- excel_results(res, res2)
 
         saveWorkbook(wb, file = file, overwrite = TRUE)
     }

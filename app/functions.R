@@ -480,9 +480,9 @@ eqr_for_table <- function(dfEQR, dfstn){
 
 # "Station"   "Replicate" "Species"   "Count"     "group"     "RA"
 
+# Station Bounds AMBI H S x y z MAMBI EQR
 
-
-excel_results <- function(ambi_res){
+excel_results <- function(ambi_res, mambi_res=NULL){
 
   wb <- createWorkbook()
 
@@ -492,6 +492,7 @@ excel_results <- function(ambi_res){
   style_nr3 <- createStyle(numFmt = "0.000")
   style_pct <- createStyle(numFmt = "0.00%")
 
+# browser()
 
   # -----------------------------------------
   id <- "AMBI"
@@ -503,6 +504,11 @@ excel_results <- function(ambi_res){
   writeData(wb, id, df, headerStyle = hs1)
 
   #openxlsx::setColWidths(wb, id, cols = 1:ncol(df), widths = "auto")
+  colnames <- c("Station")
+  for(icol in colnames){
+    i <- which(tolower(names(df))==tolower(icol))
+    openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+  }
 
   colnames <- c("AMBI", "H")
   for(icol in colnames){
@@ -535,6 +541,11 @@ excel_results <- function(ambi_res){
 
     #openxlsx::setColWidths(wb, id, cols = 1:ncol(df), widths = "auto")
 
+    colnames <- c("Station", "Replicates")
+    for(icol in colnames){
+      i <- which(tolower(names(df))==tolower(icol))
+      openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+    }
 
     colnames <- c("N", "S")
     for(icol in colnames){
@@ -580,6 +591,43 @@ excel_results <- function(ambi_res){
 
   }
 
+  df <- mambi_res$MAMBI
+  if(!is.null(df)){
+
+    names(df)[names(df)=="MAMBI"] <- "M-AMBI"
+
+    id <- "M-AMBI"
+    addWorksheet(wb, id)
+    writeData(wb, id, df, headerStyle = hs1)
+    nr <- 1 + nrow(df)
+
+    icol <- which(tolower(names(df))==tolower("M-AMBI"))
+
+    df2 <- mambi_res$bounds
+    if(!is.null(df2)){
+      names(df2)[names(df2)=="MAMBI"] <- "M-AMBI"
+      writeData(wb, id, df2, headerStyle = hs1,
+                startRow = nr+2, startCol = icol-1)
+      nr <- nr + nrow(df2) + 3
+
+    }
+
+    colnames <- c("Station", "Bounds", "Status")
+    for(icol in colnames){
+      i <- which(tolower(names(df))==tolower(icol))
+      openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+    }
+
+    i <- which(tolower(names(df))==tolower("S"))
+    openxlsx::setColWidths(wb, id, cols = i, widths = 5)
+
+    colnames <- c("AMBI", "M-AMBI","H","EQR","x","y","z")
+    for(icol in colnames){
+      i <- which(tolower(names(df))==tolower(icol))
+      openxlsx::addStyle(wb, id, style_nr3, cols = i, rows=(2:nr))
+      openxlsx::setColWidths(wb, id, cols = i, widths = 8)
+    }
+  }
 
   # -----------------------------------------
 

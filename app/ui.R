@@ -43,7 +43,7 @@ page_navbar(
             accordion(id="setup2",
                       open = "Observations",
                       accordion_panel(
-                        id = "panel_obs",
+                        value = "panel_obs",
                         title = "Observations",
                         icon = bsicons::bs_icon("file-earmark-spreadsheet"),  # bar-chart
                         reactableOutput("observationsraw")
@@ -55,6 +55,7 @@ page_navbar(
             icon = bsicons::bs_icon("calculator"),
 
             layout_columns(
+              col_widths = c(4,7,1),
 
               accordion(id="species",
                         open = TRUE,
@@ -72,23 +73,35 @@ page_navbar(
                             uiOutput("chkUnmatched"),
                             reactableOutput("tblSpec")
                           )
-                        )  #   accordion_panel
+                        ) #,  #   accordion_panel
+                        # accordion_panel(
+                        #   title = "Options",
+                        #   icon = bsicons::bs_icon("gear"),
+                        #   verticalLayout(
+                        #     uiOutput("chkMAMBI")
+                        #   )
+                        # )  #   accordion_panel
 
               ), # accordion,
-              accordion(id="ambi",
-                        open = TRUE,
+              accordion(id="acc_ambi",
                         verticalLayout(
                           accordion_panel(
+                            value="panel_ambi",
                             title = "AMBI",
                             icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-
                             reactableOutput("tblAMBI")
-
                           ),
                           accordion_panel(
+                            value = "panel_ambi_rep",
                             title = "AMBI Replicates",
                             icon = bsicons::bs_icon("file-earmark-spreadsheet"),
                             reactableOutput("tblAMBIrep")
+                          ), # accordion_panel
+                          accordion_panel(
+                           value = "panel_mambi",
+                           title = "M-AMBI",
+                           icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                           reactableOutput("tblMAMBI")
                           ) # accordion_panel
                         )  # verticalLayout
               ), # accordion
@@ -98,8 +111,8 @@ page_navbar(
                   downloadButton("btnDownloadInds", "")
             ),
             p("")
-            ),
-            col_widths = c(4,7,1))),
+            )
+            )),
 
 
 
