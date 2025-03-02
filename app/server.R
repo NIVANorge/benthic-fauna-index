@@ -1073,7 +1073,8 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     df <- df %>%
       rowwise() %>%
       mutate(class_id=.classID(EQR)) %>%
-      ungroup()
+      ungroup() %>%
+      mutate(Bounds=ifelse(is.na(Bounds),"",Bounds))
 
     class_colours <- .classcolors()
 
@@ -1090,13 +1091,19 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     reactable(df,
               sortable = F,
               style = list(fontSize = "0.8rem"),
+              rowStyle = JS("function(rowInfo) {
+    if(rowInfo.values['Bounds']!=''){
+      return { color: 'rgba(0, 0, 0, 0.5)', backgroundColor:'rgba(0, 0, 0, 0.03)'}
+    }
+  }"),
               columns = list(
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 H = colDef(format=colFormat(digits = 3), minWidth = 50),
                 x = colDef(format=colFormat(digits = 3), minWidth = 50),
                 y = colDef(format=colFormat(digits = 3), minWidth = 50),
                 z = colDef(format=colFormat(digits = 3), minWidth = 50),
-                MAMBI = colDef(format=colFormat(digits = 3), minWidth = 70),
+                MAMBI = colDef(name = "M-AMBI",
+                  format=colFormat(digits = 3), minWidth = 70),
                 EQR = colDef(format=colFormat(digits = 3), minWidth = 50),
                 Status = colDef(style=JS("function(rowInfo) {
                       if(rowInfo.values['class_id']==1){
