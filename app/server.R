@@ -12,7 +12,8 @@ library(shinyjs)
 
 source("functions.R")
 
-cat(paste0(sass_cache_get(),"\n"))
+shiny::devmode()
+
 # status class boundaries
 dfbnds <- read.table("class_boundaries.txt", sep=";", header=T)
 
