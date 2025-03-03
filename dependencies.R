@@ -38,7 +38,7 @@ for (pkg_dev in packages_dev) {
   if (pkg_dev == '') {
     next
   }
-  remotes::install_github(pkg_dev)
+  remotes::install_github(pkg_dev, force=T)
   pkg_dev <- substr(pkg_dev,1+regexpr("/",pkg_dev)[1],nchar(pkg_dev))
   if ( ! library(pkg_dev, character.only=TRUE, logical.return=TRUE) ) {
     quit(status=1, save='no')
