@@ -12,7 +12,7 @@ library(shinyjs)
 
 source("functions.R")
 
-
+cat(paste0(sass_cache_get(),"\n"))
 # status class boundaries
 dfbnds <- read.table("class_boundaries.txt", sep=";", header=T)
 
