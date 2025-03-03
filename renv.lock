@@ -39,7 +39,7 @@
       "RemoteRepo": "ambiR",
       "RemoteUsername": "niva-denmark",
       "RemoteRef": "HEAD",
-      "RemoteSha": "ada7a6964b89ab0d2dc5a2354e2d8ebc6c7e7dbe",
+      "RemoteSha": "390bd6829c9b66e45996dde4528109cd1ff46a64",
       "Requirements": [
         "R",
         "cli",
@@ -48,7 +48,7 @@
         "tidyr",
         "utils"
       ],
-      "Hash": "6de807edb6b87d566f4c6f1a99b09fae"
+      "Hash": "d5216553a7d761336e646f64c124a428"
     },
     "base64enc": {
       "Package": "base64enc",

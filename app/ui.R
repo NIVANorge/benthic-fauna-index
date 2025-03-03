@@ -89,6 +89,7 @@ page_navbar(
                             value="panel_ambi",
                             title = "AMBI",
                             icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                            uiOutput("warnAMBI"),
                             reactableOutput("tblAMBI")
                           ),
                           accordion_panel(

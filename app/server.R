@@ -199,20 +199,30 @@ function(input, output, session) {
 
   output$selectColumnRowStn <- renderUI({
     if(input$selectForm==label_wide_station){
+      val_choices <- sheet_rows()
+      val_sel <- val_choices[1]
+      val_choices <- c("none",val_choices)
       res <- tagList(selectInput(
         "colrowStn",
         "Station row:",
-        choices = sheet_rows(),
+        choices = val_choices,
+        selected = val_sel,
         selectize = F
       ))
     }else{
-
-      val_sel <- match_list(sheet_columns(), "st")
+      val_choices <- sheet_columns()
+      if(input$selectForm==label_wide_species){
+        val_sel <- val_choices[1]
+        val_choices <- c("none",val_choices)
+      }else{
+        val_sel <- match_list(val_choices, "st")
+        val_choices <- c("none",val_choices)
+      }
 
       res <- tagList(selectInput(
         "colrowStn",
         "Station column:",
-        choices = sheet_columns(),
+        choices = val_choices,
         selectize = T,
         selected = val_sel
       ))
@@ -222,20 +232,26 @@ function(input, output, session) {
 
   output$selectColumnRowRep <- renderUI({
     if(input$selectForm==label_wide_station){
+      val_choices <- sheet_rows()
       res <- tagList(selectInput(
         "colrowRep",
         "Replicates row:",
-        choices = sheet_rows(),
+        choices = c("none", val_choices),
         selectize = F
       ))
     }else{
-
-      val_sel <- match_list(sheet_columns(), "rep")
+      val_choices <- sheet_columns()
+      if(input$selectForm==label_wide_station){
+        val_sel <- val_choices[1]
+      }else{
+        val_sel <- match_list(val_choices, "rep")
+        val_choices <- c("none", val_choices)
+      }
 
       res <- tagList(selectInput(
         "colrowRep",
         "Replicates column:",
-        choices = sheet_columns(),
+        choices = val_choices,
         selectize = T,
         selected = val_sel
       ))
@@ -245,18 +261,26 @@ function(input, output, session) {
 
   output$selectColumnRowSpecies <- renderUI({
     if(input$selectForm==label_wide_species){
+      val_choices <- sheet_rows()
+      val_sel <- val_choices[1]
       res <-  tagList(selectInput(
         "colrowSpec",
         "Species row:",
-        choices = sheet_rows(),
-        selectize = F
+        choices = val_choices,
+        selectize = F,
+        selected = val_sel
       ))
     }else{
-      val_sel <- match_list(sheet_columns(), "sp")
+      val_choices <- sheet_columns()
+      if(input$selectForm==label_wide_station){
+        val_sel <- val_choices[1]
+      }else{
+        val_sel <- match_list(val_choices, "sp")
+      }
       res <- tagList(selectInput(
         "colrowSpec",
         "Species column:",
-        choices = sheet_columns(),
+        choices = val_choices,
         selectize = T,
         selected = val_sel
       ))
@@ -265,9 +289,15 @@ function(input, output, session) {
   })
 
   output$selectColumnRowCount <- renderUI({
-    if(input$selectForm==label_long){
 
-      val_sel <- match_list(sheet_columns(), c("count","ab","pop"))
+    if(is.null(input$colrowSpec)){
+      return(NULL)
+    }
+
+    if(input$selectForm==label_long){
+      val_choices <- sheet_columns()
+      val_choices <- val_choices[val_choices != input$colrowSpec]
+      val_sel <- match_list(val_choices, c("count","ab","pop"))
 
       res <- tagList(selectInput(
         "colrowCount",
@@ -325,7 +355,7 @@ function(input, output, session) {
     }else{
       cols <- 1:ncol(df)
     }
-    cols <- c("none", cols)
+    #cols <- c("none", cols)
     return(cols)
   })
 
@@ -341,7 +371,7 @@ function(input, output, session) {
     }else{
       rows <- 1:nrow(df)
     }
-    rows <- c("none", rows)
+    #rows <- c("none", rows)
     return(rows)
   })
 
@@ -421,6 +451,8 @@ function(input, output, session) {
 
   obs_data <- reactive({
     req(obs_data_raw())
+    req(input$selectForm)
+
     df <- obs_data_raw()
 
     form <- input$selectForm
@@ -430,16 +462,22 @@ function(input, output, session) {
     idCount <- input$colrowCount
     has_header <- input$hasHeader
 
+    progress <- Progress$new(session, min=1, max=10)
+    on.exit(progress$close())
+
+    progress$set(message = 'Transposing data',
+                 detail = "shouldn't take long...")
+
     df <- reform_data(df, form,
                       idStn, idRep, idSpec, idCount,
                       label_long,
                       label_wide_species,
                       label_wide_station,
-                      has_header)
-
+                      has_header,
+                      progress)
     return(df)
 
-  })
+  }, )
 
 
 
@@ -544,9 +582,10 @@ function(input, output, session) {
                           ifelse(is.na(group0),1,
                                  ifelse(group0!=group, edit, 0))))
 
+
     npg <- nrow(df)
     if(npg>0){
-    npg <- ifelse(npg < 20, 20, 10)
+      npg <- ifelse(npg < 20, 20, 10)
 
     if(is.null(df)){
       return(NULL)
@@ -557,6 +596,7 @@ function(input, output, session) {
       reactable(df,
                 #selection = "single",
                 #onClick = "select",
+                filterable = F,
                 sortable = F,
                 style = list(fontSize = "0.8rem"),
                 #rowStyle =
@@ -723,7 +763,7 @@ function(input, output, session) {
 
       if(!is.null(df_changes)){
         ix <- -1*ix
-        speciesi <- df[ix,"Species"]
+        speciesi <- df[ix,"Species"] %>% unlist()
 
         df_changes <- df_changes %>%
           filter(Species!=speciesi)
@@ -1039,25 +1079,53 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     if(is.null(df)){
       return(NULL)
     }else{
-      by_var <- ifelse("Station" %in% names(df), "Station", NULL)
-      mambi <- ambiR::MAMBI(df, by=by_var, bounds = bounds_mambi)
+      if("Station" %in% names(df)){
+        by_var <- "Station"
+      }else{
+        by_var <-  NULL
+      }
 
-      mambi <- sort_results(mambi)
+      check_vars <- c("AMBI","H","S")
+      for(vari in check_vars){
+        if(!vari %in% names(df)){
+          # not all required columns are present
+          return(NULL)
+        }
+      }
 
-      mambi <- mambi %>%
-        rowwise() %>%
-        mutate(Status=.class_names()[.classID(EQR)]) %>%
-        ungroup()
+
+      mambi <- tryCatch({
+        ambiR::MAMBI(df, by=by_var, bounds = bounds_mambi)
+      },warning = function(w){
+        message('Warning from MAMBI()!')
+        print(w)
+      },error = function(e){
+        message('Error in MAMBI()!')
+        print(e)
+        return(NULL)
+      })
+
+      if(is.null(mambi)){
+        return(res=list(err="Error calculating M-AMBI"))
+      }else{
+        mambi <- sort_results(mambi)
+
+        mambi <- mambi %>%
+          rowwise() %>%
+          mutate(Status=.class_names()[.classID(EQR)]) %>%
+          ungroup()
 
 
-      bounds<- data.frame(
-        Bounds=c("H/G","G/M","M/P","P/B"),
-        MAMBI = c(bounds_mambi["HG"], bounds_mambi["GM"],
-                  bounds_mambi["MP"], bounds_mambi["PB"]))
+        bounds<- data.frame(
+          Bounds=c("H/G","G/M","M/P","P/B"),
+          MAMBI = c(bounds_mambi["HG"], bounds_mambi["GM"],
+                    bounds_mambi["MP"], bounds_mambi["PB"]))
 
-      return(res=list("MAMBI"=mambi, "bounds"=bounds))
-    }
-    #}
+        return(res=list("MAMBI"=mambi, "bounds"=bounds))
+      }
+
+      }
+     #}
   })
 
 
@@ -1178,21 +1246,37 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       var_by <- NULL
     }
 
-    res <- ambiR::AMBI(df,
+
+    # saveRDS(df, file="../notes/breaks_ambi.Rds")
+
+     res <- tryCatch({ambiR::AMBI(df,
                       var_rep = var_rep,
                       var_species="Species",
                       var_count = "Count",
                       df_species = df_changes,
                       by=var_by, quiet = T)
+    },warning = function(w){
+      message('Warning from AMBI()!')
+      print(w)
+    },error = function(e){
+      message('Error in AMBI()!')
+      print(e)
+      return(NULL)
+    })
 
-    df <- res$AMBI
-    df <- sort_results(df)
-    res$AMBI <- df
+    df_res <- res$AMBI
+    if(is.null(df_res)){
+      # no results from AMBI
 
-    df <- res$AMBI_rep
-    if(!is.null(df)){
-      df <- sort_results(df)
-      res$AMBI_rep <- df
+    }else{
+      df_res <- sort_results(df_res)
+      res$AMBI <- df_res
+    }
+
+    df_res <- res$AMBI_rep
+    if(!is.null(df_res)){
+      df_res <- sort_results(df_res)
+      res$AMBI_rep <- df_res
     }
 
     return(res)
@@ -1223,7 +1307,11 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         df <- df %>%
           filter(Station == sel)
       }
+      show_stn <- TRUE
     }else{
+      show_stn <- FALSE
+      df <- df %>%
+        mutate(Station="x")
       sel <- ""
     }
 
@@ -1237,6 +1325,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
               onClick = "select",
               style = list(fontSize = "0.8rem"),
               columns = list(
+                Station = colDef(show=show_stn),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 N = colDef(minWidth = 50),
                 S = colDef(minWidth = 50),
@@ -1289,10 +1378,33 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   }
 
 
+  output$warnAMBI <- renderUI({
+
+    req(ambi_res())
+    req(species_summary())
+
+    df_sum <- species_summary()
+    df <- ambi_res()[["AMBI"]]
+    if(is.null(df)){
+      msg <- paste0("No results returned by AMBI() function!")
+      return(
+        tagList(
+          div(style="color:red", msg)
+      ))
+    }else{
+      return(NULL)
+    }
+
+  })
+
   output$tblAMBI <- renderReactable({
     req(ambi_res())
 
     df <- ambi_res()[["AMBI"]]
+
+    if(is.null(df)){
+      return(empty_table())
+    }else{
 
     pct_format <- colFormat(percent = TRUE, digits = 1)
     pct_minwidth <- 60
@@ -1328,7 +1440,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
                 cellPadding = "3px 1px"
               )
     )
-
+}
   })
 
 

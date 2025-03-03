@@ -20,13 +20,14 @@ sort_results <- function(df){
         select(-ord1)
     }
   }else{
+    if("Station" %in% names(df)){
     df <- df %>%
       mutate(ord1 = factor(Station,
                            levels = str_sort(unique(Station), numeric = T),
                            ordered = T)) %>%
       arrange(ord1) %>%
       select(-ord1)
-  }
+  }}
   return(df)
 }
 
@@ -50,17 +51,39 @@ match_list<- function(list, s){
 }
 
 
+get_number <- function(s){
+  n <- lapply(s, get_number_single) %>% unlist()
+  return(n)
+}
+
+get_number_single <- function(s){
+  n2 <- ifelse(is.numeric(s),s,NA)
+  s1 <- stringr::str_extract(s, "^\\d+")
+  s1 <- ifelse(nchar(s1)==nchar(s),s1,"")
+  n1 <- ifelse(nchar(s1)==0,NA,as.numeric(s1))
+  n <- ifelse(is.na(n1),n2,n1)
+  return(n)
+}
 
 
 reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
                         label_long, label_wide_species, label_wide_station,
-                        has_header){
+                        has_header, progress=NULL){
+  ip <- 1
+  if(!is.null(progress)){
+    ip <- ip + 1
+    progress$set(value = ip)
+  }
+
   dropped <- 0
   msg <- ""
   count_variable <- NA
 
   if(form==label_long){
 
+    if(is.null(idCount)){
+      return(NULL)
+    }
     cols <- c(idStn,
               idRep,
               idSpec,
@@ -88,9 +111,14 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
           cols[i] <- colnames[i]
         }
       }
+      for(coli in cols)
+      if(!coli %in% names(df)){
+        return(NULL)
+      }
       df <- df[,cols]
       df <- df %>%
-        mutate(Count=as.numeric(Count))
+        mutate(Count=get_number(Count)) %>%
+        filter(!is.na(Count))
 
     }else{
       return(NULL)
@@ -134,22 +162,41 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
         msg <- "missing species names"
       }
 
+      if(!is.null(progress)){
+        ip <- ip + 1
+        progress$set(value = ip)
+      }
+
 
       cols_piv <- names(df)[!is.na(species)]
       cols_piv <- cols_piv[!cols_piv %in% c("Station","Replicate")]
       df <- df[rows_keep,cols_keep]
       df <- df %>%
-        pivot_longer(cols=any_of(cols_piv), names_to="Species", values_to = "Count")
+        pivot_longer(cols=any_of(cols_piv), names_to="Species", values_to = "Count", values_drop_na=T)
+
+      if(!is.null(progress)){
+        ip <- ip + 1
+        progress$set(value = ip)
+      }
 
       df <- df %>%
-        filter(!is.na(Count)) %>%
-        mutate(Count=as.numeric(Count))
+        mutate(Count=get_number(Count)) %>%
+        filter(!is.na(Count))
+
+
+      if(!is.null(progress)){
+        ip <- ip + 1
+        progress$set(value = ip)
+      }
 
       df <- df %>%
         group_by(across(all_of(group_vars))) %>%
         summarise(Count=sum(Count,na.rm=T), .groups="drop")
 
-
+      if(!is.null(progress)){
+        ip <- ip + 1
+        progress$set(value = ip)
+      }
     }
 
   }else if(form==label_wide_station){
@@ -172,6 +219,11 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
           return(NULL)
         }
 
+        if(!is.null(progress)){
+          ip <- ip + 1
+          progress$set(value = ip)
+        }
+
         df <- df %>%
           filter(!is.na(Species))
 
@@ -179,15 +231,35 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
         cols_piv <- cols_piv[cols_piv!=ixcolSpec]
         cols_piv <- names(df)[cols_piv]
 
-        df <- df %>%
-          pivot_longer(cols=all_of(cols_piv), names_to="Column", values_to = "Count")
+        if(!is.null(progress)){
+          ip <- ip + 1
+          progress$set(value = ip)
+        }
 
         df <- df %>%
-          filter(!is.na(Count)) %>%
-          mutate(Count = as.numeric(Count))
+          pivot_longer(cols=all_of(cols_piv), names_to="Column", values_to = "Count", values_drop_na=T)
+
+        if(!is.null(progress)){
+          ip <- ip + 1
+          progress$set(value = ip)
+        }
+
+        df <- df %>%
+          mutate(Count=get_number(Count)) %>%
+          filter(!is.na(Count))
+
+        if(!is.null(progress)){
+          ip <- ip + 1
+          progress$set(value = ip)
+        }
 
         df <- df %>%
           select(all_of(c("Species","Count")))
+
+        if(!is.null(progress)){
+          ip <- ip + 1
+          progress$set(value = ip)
+        }
 
         df <- df %>%
           group_by(Species) %>%
@@ -227,7 +299,7 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
 
 
         df <- df %>%
-          pivot_longer(cols=all_of(cols_piv), names_to="Station", values_to = "Count")
+          pivot_longer(cols=all_of(cols_piv), names_to="Station", values_to = "Count", values_drop_na=T)
 
         df <- df %>%
           separate("Station", into = c("Station","Replicate"), sep="_")
@@ -285,6 +357,11 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
         }
 
       }}
+  }
+
+  if("Station" %in% names(df)){
+    df <- df %>%
+      mutate(Station=ifelse(is.na(Station),"",Station))
   }
 
   return(list("df"=df, "dropped"=dropped, "msg"=msg))
