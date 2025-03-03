@@ -70,17 +70,10 @@ page_navbar(
                           title = "Species",
                           icon = bsicons::bs_icon("file-earmark-spreadsheet"),
                           verticalLayout(
-                            uiOutput("chkUnmatched"),
+                            uiOutput("selectShowSpecies"),
                             reactableOutput("tblSpec")
                           )
-                        ) #,  #   accordion_panel
-                        # accordion_panel(
-                        #   title = "Options",
-                        #   icon = bsicons::bs_icon("gear"),
-                        #   verticalLayout(
-                        #     uiOutput("chkMAMBI")
-                        #   )
-                        # )  #   accordion_panel
+                        )
 
               ), # accordion,
               accordion(id="acc_ambi",

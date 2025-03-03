@@ -181,7 +181,10 @@ function(input, output, session) {
   )
 
 
-  output$checkHeader <- renderUI(
+  output$checkHeader <- renderUI({
+    req(sheet_rows())
+    req(sheet_columns())
+
     if(input$selectForm==label_long){
     tagList(checkboxInput(
       "hasHeader",
@@ -195,9 +198,12 @@ function(input, output, session) {
       # ))
       NULL
     }
-  )
+  })
 
   output$selectColumnRowStn <- renderUI({
+    req(sheet_rows())
+    req(sheet_columns())
+
     if(input$selectForm==label_wide_station){
       val_choices <- sheet_rows()
       val_sel <- val_choices[1]
@@ -231,6 +237,9 @@ function(input, output, session) {
 })
 
   output$selectColumnRowRep <- renderUI({
+    req(sheet_rows())
+    req(sheet_columns())
+
     if(input$selectForm==label_wide_station){
       val_choices <- sheet_rows()
       res <- tagList(selectInput(
@@ -260,6 +269,9 @@ function(input, output, session) {
 })
 
   output$selectColumnRowSpecies <- renderUI({
+    req(sheet_rows())
+    req(sheet_columns())
+
     if(input$selectForm==label_wide_species){
       val_choices <- sheet_rows()
       val_sel <- val_choices[1]
@@ -289,6 +301,8 @@ function(input, output, session) {
   })
 
   output$selectColumnRowCount <- renderUI({
+    req(sheet_rows())
+    req(sheet_columns())
 
     if(is.null(input$colrowSpec)){
       return(NULL)
@@ -564,24 +578,27 @@ function(input, output, session) {
   output$tblSpec <- renderReactable({
 
     req(matched_spec())
+    req(input$showSpecies)
+
     df <- matched_spec()
 
-    if(is.null(input$unmatched)){
-      show_unmatched_only <- F
-    }else{
-      show_unmatched_only <- input$unmatched
-    }
+    show_option <- input$showSpecies
 
-    if(show_unmatched_only){
+    if(show_option != "all"){
       df <- df %>%
         filter(edit==1)
     }
+
 
     df <- df %>%
       mutate(reset=ifelse(is.na(group), 0,
                           ifelse(is.na(group0),1,
                                  ifelse(group0!=group, edit, 0))))
 
+    if(show_option == "ignored"){
+      df <- df %>%
+        filter(is.na(group))
+    }
 
     npg <- nrow(df)
     if(npg>0){
@@ -719,18 +736,20 @@ function(input, output, session) {
 
   species_displayed <- reactive({
 
+
     req(matched_spec())
     df <- matched_spec()
+    # browser()
+    show_option <- input$showSpecies
 
-    if(is.null(input$unmatched)){
-      show_unmatched_only <- F
-    }else{
-      show_unmatched_only <- input$unmatched
-    }
-
-    if(show_unmatched_only){
+    if(show_option!="all"){
       df <- df %>%
         filter(edit==1)
+    }
+
+    if(show_option == "ignored"){
+      df <- df %>%
+        filter(is.na(group))
     }
 
     return(df)
@@ -1210,17 +1229,28 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
 
 
-  output$chkUnmatched <- renderUI({
 
-    req(ambi_res())
 
-    tagList(checkboxInput(
-        "unmatched",
-        "Show only unrecognized or reallocatable species",
-        TRUE,
-        width = "100%"
-      ))
+  output$selectShowSpecies <- renderUI({
+
+    req(obs_data())
+
+    val_choices <- c(
+      "All species" = "all",
+      "species can be edited" = "editable",
+      "species will be ignored" = "ignored"
+    )
+    val_sel <- val_choices[2]
+
+    tagList(selectInput(
+      "showSpecies",
+      label=  NULL,
+      choices = val_choices,
+      selectize = T,
+      selected = val_sel
+    ))
   })
+
 
 
   ambi_res <- reactive({
