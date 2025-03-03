@@ -12,7 +12,6 @@ library(shinyjs)
 
 source("functions.R")
 
-shiny::devmode()
 
 # status class boundaries
 dfbnds <- read.table("class_boundaries.txt", sep=";", header=T)
@@ -181,8 +180,10 @@ function(input, output, session) {
 
 
   output$checkHeader <- renderUI({
+    req(input$selectForm)
     req(sheet_rows())
     req(sheet_columns())
+
 
     if(input$selectForm==label_long){
     tagList(checkboxInput(
@@ -465,6 +466,7 @@ function(input, output, session) {
   obs_data <- reactive({
     req(obs_data_raw())
     req(input$selectForm)
+    req(input$colrowSpec)
 
     df <- obs_data_raw()
 
