@@ -14,7 +14,6 @@ library(shinyjs)
 source("functions.R")
 
 
-
 # status class boundaries
 dfbnds <- read.table("class_boundaries.txt", sep=";", header=T)
 
