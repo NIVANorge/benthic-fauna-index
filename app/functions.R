@@ -237,7 +237,9 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
         }
 
         df <- df %>%
-          pivot_longer(cols=all_of(cols_piv), names_to="Column", values_to = "Count", values_drop_na=T)
+          pivot_longer(cols=all_of(cols_piv),
+                       names_to="Column",
+                       values_to = "Count", values_drop_na=T)
 
         if(!is.null(progress)){
           ip <- ip + 1
@@ -317,6 +319,10 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
           filter(!is.na(Count)) %>%
           mutate(Count = as.numeric(Count))
 
+        if(!is.null(progress)){
+          ip <- ip + 1
+          progress$set(value = ip)
+        }
 
         if(is.na(row_stn)){
           df <- df %>%
@@ -354,6 +360,10 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
               select(-ord1, -ord2)
           }
 
+        }
+        if(!is.null(progress)){
+          ip <- ip + 1
+          progress$set(value = ip)
         }
 
       }}

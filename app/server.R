@@ -1,3 +1,4 @@
+shinyOptions(cache = cachem::cache_disk("./www/cache/"))
 library(shiny)
 library(readxl)
 library(dplyr)
