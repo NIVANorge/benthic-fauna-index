@@ -485,7 +485,7 @@ function(input, output, session) {
     progress <- Progress$new(session, min=1, max=100)
     on.exit(progress$close())
 
-    progress$set(message = 'Transforming data',
+    progress$set(message = 'Reorganizing data',
                  detail = "shouldn't take long...")
 
     df <- reform_data(df, form,
