@@ -9,6 +9,12 @@ library(openxlsx)
 library(ambiR)
 library(stringr)
 library(shinyjs)
+library(promises)
+library(future)
+
+# Options for asynchronous strategies: multisession,
+# multicore (not Windows/RStudio), cluster
+plan(multisession)
 
 source("functions.R")
 
@@ -576,6 +582,46 @@ function(input, output, session) {
   })
 
 
+  # initiate reactive values
+  go_to_page <- reactiveVal(NULL)
+
+  observeEvent(go_to_page(),{
+    #req(go_to_page())
+    #req(vals$species_page_current)
+
+    #browser()
+    page_current <- vals$species_page_current
+    cat(paste0("page ",page_current,"\n"))
+    #if(!is.null(page_current)){
+      updateReactable("tblSpec", page = page_current)
+    #}
+
+    go_to_page(NULL)
+
+  })
+
+  observeEvent(input$btnx,{
+
+    updateReactable("tblSpec", page = 1)
+
+  })
+
+  observeEvent(matched_spec(),{
+    # req(species_summary())
+    # req()
+    # req(input$showSpecies)
+    # req(vals$species_page_current)
+
+    future_promise({
+      # delay
+      Sys.sleep(5)
+      # filter
+      TRUE
+    }) %...>%
+      go_to_page()
+
+
+  })
 
   output$tblSpec <- renderReactable({
 
@@ -684,6 +730,7 @@ function(input, output, session) {
                   headerStyle = list(background = "#f7f7f8"),
                   cellPadding = "1px 1px"
                 ),
+
                 onClick = JS("function(rowInfo, column) {
     // Only handle click events on the 'details' column
     if (column.id != 'edit' && column.id != 'reset') {
@@ -986,6 +1033,8 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   observeEvent(input$change, {
 
     removeModal()
+
+    vals$species_page_current <- getReactableState("tblSpec", "page")
 
     grp_new <- as.numeric(input$new_group)
 

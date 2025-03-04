@@ -63,7 +63,8 @@ page_navbar(
                           title = "Species summary",
                           icon = bsicons::bs_icon("file-earmark-spreadsheet"),
                           verticalLayout(
-                            reactableOutput("tblSpecCount")
+                            reactableOutput("tblSpecCount"),
+                            actionButton("btnx","X")
                           )
                         ),  #   accordion_panel
                         accordion_panel(
