@@ -440,11 +440,6 @@ function(input, output, session) {
                 sortable = F,
                 style = list(fontSize = "0.8rem"),
                 columns = list(
-                  Kode = colDef(width = 60),
-                  CF = colDef(width = 30),
-                  SP = colDef(width = 30),
-                  NB = colDef(width = 30),
-                  Navn = colDef(width = 300)
                 ), # columns
                 defaultColDef = col_default,
                 compact = TRUE,
@@ -513,7 +508,8 @@ function(input, output, session) {
       return(reactable())
     }else{
       reactable(df,
-                sortable = F,
+                sortable = T,
+                filterable = T,
                 style = list(fontSize = "0.8rem"),
                 columns = list(
                   group0 = colDef(show=FALSE)
@@ -1185,7 +1181,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     }
 
     pct_format <- colFormat(percent = TRUE, digits = 1)
-    pct_minwidth <- 60
+    pct_minwidth <- 50
 
     # Station
     # Bounds AMBI H S x y z MAMBI EQR
@@ -1196,9 +1192,11 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     if(rowInfo.values['Bounds']!=''){
       return { color: 'rgba(0, 0, 0, 0.5)', backgroundColor:'rgba(0, 0, 0, 0.03)'}
     }
-  }"),
+  }"),        showSortable=T,
               columns = list(
-                Station = colDef(show=show_stn, minWidth = 100),
+                Station = colDef(show=show_stn, minWidth = 100,
+                                 filterable = TRUE,
+                                 sortable = TRUE),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 H = colDef(format=colFormat(digits = 3), minWidth = 50),
                 x = colDef(format=colFormat(digits = 3), minWidth = 50),
@@ -1345,12 +1343,15 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
     sel <- ambi_selected()
 
+    stn_filter <- TRUE
+
     if("Station" %in% names(df_main)){
       stns <- df_main$Station
       sel <- ifelse(is.null(sel),"",stns[sel])
       if(sel!=""){
         df <- df %>%
           filter(Station == sel)
+        stn_filter <- FALSE
       }
       show_stn <- TRUE
     }else{
@@ -1361,8 +1362,17 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     }
 
 
+    if("Replicate" %in% names(df)){
+      show_rep <- TRUE
+    }else{
+      show_rep <- FALSE
+      df <- df %>%
+        mutate(Replicate="x")
+    }
+
+
     pct_format <- colFormat(percent = TRUE, digits = 1)
-    pct_minwidth <- 60
+    pct_minwidth <- 50
 
     reactable(df,
               sortable = F,
@@ -1370,10 +1380,15 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
               onClick = "select",
               style = list(fontSize = "0.8rem"),
               columns = list(
-                Station = colDef(show=show_stn, minWidth = 100),
+                Station = colDef(show=show_stn, minWidth = 100,
+                                 filterable = stn_filter,
+                                 sortable = TRUE),
+                Replicate = colDef(show=show_rep, minWidth = 70,
+                                 filterable = TRUE,
+                                 sortable = TRUE),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 N = colDef(minWidth = 50),
-                S = colDef(minWidth = 50),
+                S = colDef(minWidth = 40),
                 fNA = colDef(name="%NA", format=pct_format, minWidth = pct_minwidth),
                 I = colDef(format=pct_format, minWidth = pct_minwidth),
                 II = colDef(format=pct_format, minWidth = pct_minwidth),
@@ -1452,7 +1467,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     }else{
 
     pct_format <- colFormat(percent = TRUE, digits = 1)
-    pct_minwidth <- 60
+    pct_minwidth <- 50
 
     if("Station" %in% names(df)){
       show_stn <- TRUE
@@ -1462,17 +1477,17 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         mutate(Station="x")
     }
 
-
     reactable(df,
-              sortable = F,
+              sortable=F,
+              showSortable=T,
               selection = "single",
               onClick = "select",
               style = list(fontSize = "0.8rem"),
               columns = list(
-                Station = colDef(show=show_stn, minWidth = 100),
+                Station = colDef(show=show_stn, minWidth = 100, sortable = TRUE, filterable = TRUE),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 N = colDef(minWidth = 50),
-                S = colDef(minWidth = 50),
+                S = colDef(minWidth = 40),
                 H = colDef(format=colFormat(digits = 3), minWidth = 50),
                 fNA = colDef(name="%NA", format=pct_format, minWidth = pct_minwidth),
                  I = colDef(format=pct_format, minWidth = pct_minwidth),
