@@ -1,4 +1,3 @@
-shinyOptions(cache = cachem::cache_disk("./www/cache/"))
 library(shiny)
 library(readxl)
 library(dplyr)
@@ -476,12 +475,17 @@ function(input, output, session) {
     idRep <- input$colrowRep
     idSpec <- input$colrowSpec
     idCount <- input$colrowCount
-    has_header <- input$hasHeader
 
-    progress <- Progress$new(session, min=1, max=10)
+    if(input$selectForm==label_long){
+      has_header <- input$hasHeader
+    }else{
+      has_header <- F
+    }
+
+    progress <- Progress$new(session, min=1, max=100)
     on.exit(progress$close())
 
-    progress$set(message = 'Transposing data',
+    progress$set(message = 'Transforming data',
                  detail = "shouldn't take long...")
 
     df <- reform_data(df, form,
@@ -741,7 +745,7 @@ function(input, output, session) {
 
     req(matched_spec())
     df <- matched_spec()
-    # browser()
+    #
     show_option <- input$showSpecies
 
     if(show_option!="all"){
@@ -1159,6 +1163,14 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       return(NULL)
     }
 
+    if("Station" %in% names(df)){
+      show_stn <- TRUE
+    }else{
+      show_stn <- FALSE
+      df <- df %>%
+        mutate(Station="x")
+    }
+
     df <- df %>%
       rowwise() %>%
       mutate(class_id=.classID(EQR)) %>%
@@ -1186,6 +1198,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     }
   }"),
               columns = list(
+                Station = colDef(show=show_stn, minWidth = 100),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 H = colDef(format=colFormat(digits = 3), minWidth = 50),
                 x = colDef(format=colFormat(digits = 3), minWidth = 50),
@@ -1357,7 +1370,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
               onClick = "select",
               style = list(fontSize = "0.8rem"),
               columns = list(
-                Station = colDef(show=show_stn),
+                Station = colDef(show=show_stn, minWidth = 100),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 N = colDef(minWidth = 50),
                 S = colDef(minWidth = 50),
@@ -1441,12 +1454,22 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     pct_format <- colFormat(percent = TRUE, digits = 1)
     pct_minwidth <- 60
 
+    if("Station" %in% names(df)){
+      show_stn <- TRUE
+    }else{
+      show_stn <- FALSE
+      df <- df %>%
+        mutate(Station="x")
+    }
+
+
     reactable(df,
               sortable = F,
               selection = "single",
               onClick = "select",
               style = list(fontSize = "0.8rem"),
               columns = list(
+                Station = colDef(show=show_stn, minWidth = 100),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 N = colDef(minWidth = 50),
                 S = colDef(minWidth = 50),

@@ -69,6 +69,7 @@ get_number_single <- function(s){
 reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
                         label_long, label_wide_species, label_wide_station,
                         has_header, progress=NULL){
+  split_n <- 10
   ip <- 1
   if(!is.null(progress)){
     ip <- ip + 1
@@ -171,8 +172,14 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
       cols_piv <- names(df)[!is.na(species)]
       cols_piv <- cols_piv[!cols_piv %in% c("Station","Replicate")]
       df <- df[rows_keep,cols_keep]
+
       df <- df %>%
-        pivot_longer(cols=any_of(cols_piv), names_to="Species", values_to = "Count", values_drop_na=T)
+        pivot_split(cols_piv=cols_piv,
+                    names_to="Species",
+                    values_to = "Count",
+                    split_n=split_n,
+                    progress = progress)
+
 
       if(!is.null(progress)){
         ip <- ip + 1
@@ -235,11 +242,17 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
           ip <- ip + 1
           progress$set(value = ip)
         }
-
         df <- df %>%
-          pivot_longer(cols=all_of(cols_piv),
-                       names_to="Column",
-                       values_to = "Count", values_drop_na=T)
+          pivot_split(cols_piv=cols_piv,
+                      names_to="Station",
+                      values_to = "Count",
+                      split_n=split_n,
+                      progress = progress)
+
+        # df <- df %>%
+        #   pivot_longer(cols=all_of(cols_piv),
+        #                names_to="Column",
+        #                values_to = "Count", values_drop_na=T)
 
         if(!is.null(progress)){
           ip <- ip + 1
@@ -268,8 +281,8 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
           summarise(Count=sum(Count, na.rm = T), .groups="drop")
 
 
-      }else{
-        #browser()
+      }else{ # is.na(row_stn) & is.na(row_rep)
+        #
         if(!is.na(row_stn)){
           stns <- df[row_stn,] %>% unlist()
         }else{
@@ -284,27 +297,42 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
 
         stns <- paste(stns, reps, sep="_")
 
-        names(df)[ixcolSpec] <- "Species"
-
-        df <- df %>%
-          filter(!is.na(Species))
-
         names(df) <- stns
         names(df)[ixcolSpec] <- "Species"
+
+
         #rows_keep <- 1:nrow(df)
         #rows_keep <- rows_keep[!rows_keep %in% c(row_stn, row_rep)]
         #df <- df[rows_keep,]
 
-        cols_piv <- 1:ncol(df)
-        cols_piv <- cols_piv[cols_piv!=ixcolSpec]
-        cols_piv <- names(df)[cols_piv]
+        names_orig <-names(df)
+        names_t <- paste0("col_",(1:length(names_orig)))
+        names_t[ixcolSpec] <- "Species"
 
+        names(df) <- c(names_t)
+
+        cols_piv <- names_t[names_t!="Species"]
 
         df <- df %>%
-          pivot_longer(cols=all_of(cols_piv), names_to="Station", values_to = "Count", values_drop_na=T)
+          filter(!is.na(Species))
 
         df <- df %>%
-          separate("Station", into = c("Station","Replicate"), sep="_")
+          pivot_split(cols_piv=cols_piv,
+                      names_to="StationX",
+                      values_to = "Count",
+                      split_n=split_n,
+                      progress = progress)
+
+        names_match <- data.frame(StationX=names_t, Station=names_orig)
+
+        df <- df %>%
+          left_join(names_match,by="StationX") %>%
+          select(-StationX)
+
+        df <- df %>%
+          separate_wider_delim("Station", names = c("Station","Replicate"), delim="_", too_few = "align_start") %>%
+          mutate(Replicate=ifelse(is.na(Replicate),"",Replicate))
+
 
         for(i in 2:nrow(df)){
           if(df[i,"Station"] == "NA"){
@@ -366,7 +394,8 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
           progress$set(value = ip)
         }
 
-      }}
+      } # is.na(row_stn) & is.na(row_rep)
+      }
   }
 
   if("Station" %in% names(df)){
@@ -374,9 +403,49 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
       mutate(Station=ifelse(is.na(Station),"",Station))
   }
 
+  df <- df %>%
+    select(any_of(c("Station","Replicate","Species","Count")))
+
   return(list("df"=df, "dropped"=dropped, "msg"=msg))
 
 }
+
+
+pivot_part <- function(df, cols_piv, names_to, values_to = "Count", progress=progress, pstep=1){
+
+  df <- df %>%
+     pivot_longer(cols=all_of(cols_piv), names_to=names_to, values_to = "Count")
+
+  df <- df %>%
+    filter(!is.na(Count)) %>%
+    filter(Count!="0")
+
+  if(!is.null(progress)){
+    progress$inc(pstep)
+  }
+
+  return(df)
+
+}
+
+pivot_split <- function(df, cols_piv, names_to, values_to = "Count", split_n, progress){
+
+  df_split <- df %>%
+    mutate(split_id = 1+floor(row_number()/split_n)) %>%
+    split(.$split_id)
+
+  pstep = floor(90/length(df_split))
+
+  df <- purrr::map(df_split, pivot_part, cols_piv,
+                   names_to=names_to, values_to = "Count",
+                   progress=progress, pstep=pstep) %>%
+    bind_rows() %>%
+    select(-split_id)
+
+  return(df)
+
+}
+
 
 fix_column_names<- function(s){
 
@@ -579,7 +648,7 @@ excel_results <- function(ambi_res, mambi_res=NULL){
   style_nr3 <- createStyle(numFmt = "0.000")
   style_pct <- createStyle(numFmt = "0.00%")
 
-# browser()
+#
 
   # -----------------------------------------
   id <- "AMBI"
@@ -1290,7 +1359,7 @@ species_data <- function(df, dfstns, options){
 # -------------- parameter_name() -------------------------
 
 .parameter_name <- function(Parameter, options){
-  #browser()
+  #
   grps <- names(options)
   val <- NA_character_
   if(Parameter == "points_adjust"){
