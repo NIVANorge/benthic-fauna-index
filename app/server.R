@@ -492,7 +492,7 @@ function(input, output, session) {
                       progress)
     return(df)
 
-  }, )
+  })
 
 
 
@@ -602,9 +602,10 @@ function(input, output, session) {
         filter(is.na(group))
     }
 
+
     npg <- nrow(df)
     if(npg>0){
-      npg <- ifelse(npg < 20, 20, 10)
+      #npg <- ifelse(npg < 20, 20, 10)
 
     if(is.null(df)){
       return(NULL)
@@ -615,14 +616,17 @@ function(input, output, session) {
       reactable(df,
                 #selection = "single",
                 #onClick = "select",
+                height = 500,
+                #width = 400,
                 filterable = F,
-                sortable = F,
+                sortable = T,
                 style = list(fontSize = "0.8rem"),
                 #rowStyle =
                 columns = list(
-                  Species = colDef(minWidth = 150),
+                  Species = colDef(minWidth = 150,
+                                   filterable = T),
                   group = colDef(name="Group",
-                                 minWidth = 70,
+                                 minWidth = 60,
                                  cell = function(value){
                                    if(is.na(value)){
                                      val <- ""
@@ -675,8 +679,8 @@ function(input, output, session) {
                 defaultColDef = colDef(minWidth = 55, vAlign = "bottom"), # show=T,
                 compact = TRUE,
                 wrap = FALSE,
-                fullWidth = F,
-                resizable = F,
+                fullWidth = T,
+                resizable = T,
                 bordered = TRUE,
                 defaultPageSize = npg,
                 highlight = TRUE,
