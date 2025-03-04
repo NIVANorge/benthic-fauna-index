@@ -1086,12 +1086,6 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   mambi_res <- reactive({
 
     req(ambi_res())
-    # req(input$doMAMBI)
-    # doMAMBI <- input$doMAMBI
-    # doMAMBI <- ifelse(is.null(doMAMBI), F, doMAMBI)
-    # if(doMAMBI==F){
-    #   return(NULL)
-    # }else{
 
     df <- ambi_res()[["AMBI"]]
 
@@ -1151,21 +1145,38 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
 
   output$tblMAMBI <- renderReactable({
+
+    req(ambi_res())
     req(mambi_res())
 
     df <- mambi_res()$MAMBI
+    df_main <- ambi_res()[["AMBI"]]
 
     if(is.null(df)){
       return(NULL)
     }
 
-    if("Station" %in% names(df)){
+    sel <- ambi_selected()
+
+
+    stn_filter <- TRUE
+
+    if("Station" %in% names(df_main)){
+      stns <- df_main$Station
+      sel <- ifelse(is.null(sel),"",stns[sel])
+      if(sel!=""){
+        df <- df %>%
+          filter(Station == sel)
+        stn_filter <- FALSE
+      }
       show_stn <- TRUE
     }else{
       show_stn <- FALSE
       df <- df %>%
         mutate(Station="x")
+      sel <- ""
     }
+
 
     df <- df %>%
       rowwise() %>%
@@ -1477,10 +1488,16 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         mutate(Station="x")
     }
 
+    if(nrow(df)==1){
+      selection_type <- NULL
+    }else{
+      selection_type <- "single"
+    }
+
     reactable(df,
               sortable=F,
               showSortable=T,
-              selection = "single",
+              selection = selection_type,
               onClick = "select",
               style = list(fontSize = "0.8rem"),
               columns = list(
