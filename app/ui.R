@@ -51,31 +51,49 @@ page_navbar(
             ) # accordion
             ) # layout_columns
   ),
+  nav_panel(title="Species",
+            icon = bsicons::bs_icon("journal-text"),
+            #icon = bsicons::bs_icon("list-columns-reverse"),
+
+            layout_columns(
+              col_widths = c(3,6,2),
+
+            accordion(id="species1",
+                      open = TRUE,
+                      accordion_panel(
+                        title = "Species summary",
+                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                        verticalLayout(
+                          reactableOutput("tblSpecCount")
+                        )
+                      )  #   accordion_panel
+            ), # accordion,
+            accordion(id="species2",
+                      open = TRUE,
+                      accordion_panel(
+                        title = "Species",
+                        icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+                        verticalLayout(
+                          uiOutput("selectShowSpecies"),
+                          reactableOutput("tblSpec")
+                        )
+                      )
+            ), # accordion,
+            uiOutput("btnCalc")
+  )),
   nav_panel(title="Index calculations",
             icon = bsicons::bs_icon("calculator"),
 
             layout_columns(
-              col_widths = c(4,7,1),
-
-              accordion(id="species",
-                        open = TRUE,
-                        accordion_panel(
-                          title = "Species summary",
-                          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-                          verticalLayout(
-                            reactableOutput("tblSpecCount")
-                          )
-                        ),  #   accordion_panel
-                        accordion_panel(
-                          title = "Species",
-                          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-                          verticalLayout(
-                            uiOutput("selectShowSpecies"),
-                            reactableOutput("tblSpec")
-                          )
-                        )
-
-              ), # accordion,
+              col_widths = c(2,7,2),
+              accordion(id="acc_ambi",
+                        verticalLayout(
+                          accordion_panel(
+                            value="panel_options",
+                            title = "Options",
+                            icon = bsicons::bs_icon("check2-square"),
+                            p("")
+                          ))),
               accordion(id="acc_ambi",
                         verticalLayout(
                           accordion_panel(

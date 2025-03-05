@@ -917,6 +917,21 @@ function(input, output, session) {
 
   })
 
+  output$btnCalc <- renderUI({
+
+    if(is.null(ambi_res())){
+      btn_icon <- icon("play")
+      btn_lab <- "Go"
+    }else{
+      btn_icon <- icon("repeat")
+      btn_lab <- "Update"
+    }
+
+    tagList(actionButton("goCalc",
+                         width = "100px",
+                         label=btn_lab,
+                         icon=btn_icon))
+  })
 
   output$tblSimilar <- renderReactable({
 
@@ -1132,10 +1147,10 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       }else{
         mambi <- sort_results(mambi)
 
-        mambi <- mambi %>%
-          rowwise() %>%
-          mutate(Status=.class_names()[.classID(EQR)]) %>%
-          ungroup()
+        # mambi <- mambi %>%
+        #   rowwise() %>%
+        #   mutate(Status=.class_names()[.classID(EQR)]) %>%
+        #   ungroup()
 
 
         bounds<- data.frame(
@@ -1189,6 +1204,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       rowwise() %>%
       mutate(class_id=.classID(EQR)) %>%
       ungroup() %>%
+      mutate(class_id=ifelse(is.na(Bounds),class_id,0)) %>%
       mutate(Bounds=ifelse(is.na(Bounds),"",Bounds))
 
     class_colours <- .classcolors()
@@ -1286,8 +1302,10 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   ambi_res <- reactive({
 
+    input$goCalc
+
     req(obs_data())
-    df_changes <- vals$df_changes
+    df_changes <- isolate(vals$df_changes)
 
 
     df <- obs_data()$df
