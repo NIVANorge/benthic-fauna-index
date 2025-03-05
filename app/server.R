@@ -1,3 +1,6 @@
+options(shiny.reactlog = TRUE)
+shinyOptions(cache = cachem::cache_disk(file.path(dirname(tempdir()), "benthicfauna-cache")))
+
 library(shiny)
 library(readxl)
 library(dplyr)
