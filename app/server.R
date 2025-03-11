@@ -58,14 +58,14 @@ function(input, output, session) {
 
   xl_data <- reactive({
     req(xl_sheets())
-    req(input$selectSheet)
+    req(input$selectedSheet)
     df_list <- xl_sheets()
-    return(df_list[[input$selectSheet]])
+    return(df_list[[input$selectedSheet]])
   })
 
   sheet_options <- reactive({
     req(xl_names())
-    req(input$selectSheet)
+    req(input$selectedSheet)
     df_list <- xl_sheets()
     if("Instillinger" %in% xl_names()){
       return(df_list[["Instillinger"]])
@@ -119,7 +119,7 @@ function(input, output, session) {
 
     if(station_column()==""){
       ok = FALSE
-      msg <- paste0(input$selectSheet,
+      msg <- paste0(input$selectedSheet,
                     ": does not appear to contain stations IDs. Check your input selection")
     }else{
       ok = TRUE
@@ -129,6 +129,7 @@ function(input, output, session) {
   })
 
   observe({
+    req(input$selectForm)
     xl_data()
     #accordion_panel_open("setup","Stations")
     accordion_panel_open("setup","Observations")
@@ -157,29 +158,33 @@ function(input, output, session) {
 
     }
 
-
   })
 
 
-  output$selectSheet <- renderUI(
-
+  output$selectSheet <- renderUI({
+    req(xl_names())
     tagList(selectInput(
-      "selectSheet",
+      "selectedSheet",
       "Select sheet:",
       choices = xl_names(),
       #selected = sheet_initial(),
       selectize = T
       ))
-  )
+  })
 
-  output$selectStructure <- renderUI(
+  output$selectStructure <- renderUI({
+    req(xl_data())
+    guess_form <- guess_structure(xl_data())
+
+    req(input$selectedSheet)
     tagList(selectInput(
       "selectForm",
       "Select data layout:",
       choices = data_structures(),
+      selected = guess_form,
       selectize = T
     ))
-  )
+ })
 
 
   output$checkHeader <- renderUI({
@@ -394,8 +399,10 @@ function(input, output, session) {
 
   obs_data_raw <- reactive({
 
+    req(input$selectForm)
     req(xl_data())
     df <- xl_data()
+
     if(input$selectForm==label_long){
       use_col_names <- ifelse(is.null(input$hasHeader),
                               FALSE,
@@ -462,6 +469,7 @@ function(input, output, session) {
 
 
   obs_data <- reactive({
+    req(input$selectedSheet)
     req(obs_data_raw())
     req(input$selectForm)
     req(input$colrowSpec)
@@ -495,6 +503,11 @@ function(input, output, session) {
                       progress)
     return(df)
 
+  })
+
+  observe({
+    obs_data()
+    vals$clicked <- NULL
   })
 
 
@@ -719,9 +732,14 @@ function(input, output, session) {
 
 
   matched_spec <- reactive({
-    req(ambi_res())
 
-    df <- ambi_res()[["matched"]]
+    # need to remove the dependence on ambi results
+    # so that species matching is done first
+    # then ambi is calculated
+
+    req(ambi_first())
+
+    df <- ambi_first()[["matched"]]
 
     # df <- df %>%
     #   mutate(edit=ifelse(is.na(group),1,ifelse(RA==1,1,"")))
@@ -796,6 +814,8 @@ function(input, output, session) {
         df_changes <- df_changes %>%
           filter(Species!=speciesi)
         vals$df_changes <- df_changes
+
+        vals$clicked <- NULL
       }
 
     }
@@ -886,6 +906,8 @@ function(input, output, session) {
         outputId = "tblSimilar",
         selected = NA
       )
+      vals$clicked <- NULL
+
     }else{
       action_manual <- TRUE
     }
@@ -1020,6 +1042,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
           bind_rows(df_new)
       }
       vals$df_changes <- df_changes
+
       # updateReactable("table", data = filtered)
 
     }
@@ -1089,6 +1112,10 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   }, ignoreInit = TRUE, ignoreNULL=FALSE)
 
+  bounds_mambi <- reactive({
+    c(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
+  })
+
 
   mambi_res <- reactive({
 
@@ -1096,7 +1123,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
     df <- ambi_res()[["AMBI"]]
 
-    bounds_mambi <- c(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
+    bounds_mambi <- bounds_mambi()
 
     if(is.null(df)){
       return(NULL)
@@ -1132,10 +1159,10 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       }else{
         mambi <- sort_results(mambi)
 
-        mambi <- mambi %>%
-          rowwise() %>%
-          mutate(Status=.class_names()[.classID(EQR)]) %>%
-          ungroup()
+        # mambi <- mambi %>%
+        #   rowwise() %>%
+        #   mutate(Status=.class_names()[.classID(EQR)]) %>%
+        #   ungroup()
 
 
         bounds<- data.frame(
@@ -1184,12 +1211,13 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       sel <- ""
     }
 
-
     df <- df %>%
       rowwise() %>%
       mutate(class_id=.classID(EQR)) %>%
       ungroup() %>%
+      mutate(class_id=ifelse(is.na(Bounds),class_id,0)) %>%
       mutate(Bounds=ifelse(is.na(Bounds),"",Bounds))
+
 
     class_colours <- .classcolors()
 
@@ -1283,64 +1311,37 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   })
 
 
-
-  ambi_res <- reactive({
+  ambi_first <- reactive({
 
     req(obs_data())
     df_changes <- vals$df_changes
-
-
     df <- obs_data()$df
 
-    if(!"Species" %in% names(df)){
-      return(NULL)
-    }
+    ambi_calculation(df, df_changes)
+  })
 
-    if("Replicate" %in% names(df)){
-      var_rep <- "Replicate"
+
+
+
+  ambi_res <- reactive({
+
+    req(vals$first_click)
+    req(obs_data())
+    req(ambi_first())
+    #input$start_calculation
+    is_clicked <- vals$clicked
+    is_clicked <- ifelse(is.null(is_clicked), F, is_clicked)
+    if(is_clicked==T){
+
+      df_changes <- vals$df_changes
+      df <- obs_data()$df
+
+      res <- ambi_calculation(df, df_changes)
+      return(res)
     }else{
-      var_rep <- NA_character_
-    }
-    if("Station" %in% names(df)){
-      var_by <- c("Station")
-    }else{
-      var_by <- NULL
+      return(list(AMBI=NULL))
     }
 
-
-    # saveRDS(df, file="../notes/breaks_ambi.Rds")
-
-     res <- tryCatch({ambiR::AMBI(df,
-                      var_rep = var_rep,
-                      var_species="Species",
-                      var_count = "Count",
-                      df_species = df_changes,
-                      by=var_by, quiet = T)
-    },warning = function(w){
-      message('Warning from AMBI()!')
-      print(w)
-    },error = function(e){
-      message('Error in AMBI()!')
-      print(e)
-      return(NULL)
-    })
-
-    df_res <- res$AMBI
-    if(is.null(df_res)){
-      # no results from AMBI
-
-    }else{
-      df_res <- sort_results(df_res)
-      res$AMBI <- df_res
-    }
-
-    df_res <- res$AMBI_rep
-    if(!is.null(df_res)){
-      df_res <- sort_results(df_res)
-      res$AMBI_rep <- df_res
-    }
-
-    return(res)
   })
 
 
@@ -1463,7 +1464,11 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
     df_sum <- species_summary()
     df <- ambi_res()[["AMBI"]]
-    if(is.null(df)){
+
+    is_clicked <- vals$clicked
+    is_clicked <- ifelse(is.null(is_clicked), F, is_clicked)
+
+    if(is.null(df) & is_clicked==T){
       msg <- paste0("No results returned by AMBI() function!")
       return(
         tagList(
@@ -1535,6 +1540,67 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
               )
     )
 }
+  })
+
+
+  observeEvent(input$start_calculation,{
+    vals$clicked <- TRUE
+    vals$first_click <- TRUE
+    accordion_panel_remove(
+      id="acc_ambi",
+      "AMBI Replicates"
+    )
+
+    df <- isolate(ambi_res()[["AMBI_rep"]])
+
+    if(!is.null(df)){
+
+      accordion_panel_insert(
+        id="acc_ambi",
+        accordion_panel(
+          #value = "panel_ambi_rep",
+          title = "AMBI Replicates",
+          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+          reactableOutput("tblAMBIrep")
+        ),
+        target = "panel_ambi",
+        position = "after"
+      )
+
+    }
+
+  })
+
+
+
+
+  output$btnCalculate <- renderUI({
+    req(ambi_first())
+    #res_ambi <- ambi_res()[["AMBI"]]
+    if(is.null(vals$first_click)){
+     icon_name <- "play"
+     lab <- "Calculate"
+    }else{
+     icon_name <- "redo"
+     lab <- "Update"
+    }
+    is_clicked <- vals$clicked
+    is_clicked <- ifelse(is.null(is_clicked), F, is_clicked)
+    if(is_clicked==T){
+      res <- tagList(disabled(
+        actionButton(
+          "start_calculation",
+          label=lab,
+          icon=icon(icon_name)
+        )))
+    }else{
+      res <- tagList(
+        actionButton(
+          "start_calculation",
+          label=lab,
+          icon=icon(icon_name)
+        ))
+    }
   })
 
 

@@ -1,3 +1,90 @@
+
+ambi_calculation <- function(df, df_changes=NULL){
+
+  if(!"Species" %in% names(df)){
+    return(NULL)
+  }
+
+  if("Replicate" %in% names(df)){
+    var_rep <- "Replicate"
+  }else{
+    var_rep <- NA_character_
+  }
+  if("Station" %in% names(df)){
+    var_by <- c("Station")
+  }else{
+    var_by <- NULL
+  }
+
+
+  # saveRDS(df, file="../notes/breaks_ambi.Rds")
+
+  res <- tryCatch({ambiR::AMBI(df,
+                               var_rep = var_rep,
+                               var_species="Species",
+                               var_count = "Count",
+                               df_species = df_changes,
+                               by=var_by, quiet = T)
+  },warning = function(w){
+    message('Warning from AMBI()!')
+    print(w)
+  },error = function(e){
+    message('Error in AMBI()!')
+    print(e)
+    return(NULL)
+  })
+
+  df_res <- res$AMBI
+  if(is.null(df_res)){
+    # no results from AMBI
+
+  }else{
+    df_res <- sort_results(df_res)
+    res$AMBI <- df_res
+  }
+
+  df_res <- res$AMBI_rep
+  if(!is.null(df_res)){
+    df_res <- sort_results(df_res)
+    res$AMBI_rep <- df_res
+  }
+
+  return(res)
+}
+
+guess_structure <- function(df,
+                            options=c(label_long="long (DB)",
+                                      label_wide_species="wide (species in columns)",
+                                      label_wide_station ="wide (stations in columns)")){
+
+  require(ambiR)
+
+  res <- options["label_long"]
+  if(ncol(df) >5){
+    species <- ambiR::AMBI_species() %>%
+      pull(species)
+
+    list_s <- list(names(df), df[1,] %>% unlist(), df[2,] %>% unlist)
+
+    for(s in list_s){
+      s <- s[s %in% species]
+      if(length(s)>2){
+        return(options["label_wise_species"])
+      }
+    }
+
+    for(i in 1:4){
+      s <- df[,1] %>% unlist()
+      s <- s[s %in% species]
+      if(length(s)>2){
+        return(options["label_wide_station"])
+      }
+    }
+  }
+  return(res)
+}
+
+
 sort_results <- function(df){
 
   if("Replicate" %in% names(df)){
