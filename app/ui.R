@@ -77,7 +77,9 @@ page_navbar(
 
               ), # accordion,
               accordion(id="acc_ambi",
-                        verticalLayout(
+                        uiOutput("btnCalculate"),
+                        #verticalLayout(
+
                           accordion_panel(
                             value="panel_ambi",
                             title = "AMBI",
@@ -85,19 +87,17 @@ page_navbar(
                             uiOutput("warnAMBI"),
                             reactableOutput("tblAMBI")
                           ),
-                          accordion_panel(
-                            value = "panel_ambi_rep",
-                            title = "AMBI Replicates",
-                            icon = bsicons::bs_icon("file-earmark-spreadsheet"),
-                            reactableOutput("tblAMBIrep")
-                          ), # accordion_panel
-                          accordion_panel(
+
+                         accordion_panel(
                            value = "panel_mambi",
                            title = "M-AMBI",
                            icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+
+                           p("bounds"),
                            reactableOutput("tblMAMBI")
                           ) # accordion_panel
-                        )  # verticalLayout
+
+                        #)  # verticalLayout
               ), # accordion
 
               verticalLayout(
