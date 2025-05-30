@@ -9,7 +9,7 @@ tagList(
 page_navbar(
   title = "Benthic fauna index calculations",
   id = "page",
-  theme = bs_theme(font_scale = 0.8), #"0.7rem"
+  #theme = bs_theme(font_scale = 0.8), #"0.7rem"
   tags$style(type='text/css', "
   .form-control {font-size: 0.8rem;}
   button { font-size: 0.8rem; }
