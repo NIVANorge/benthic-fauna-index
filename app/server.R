@@ -455,6 +455,8 @@ function(input, output, session) {
 
   output$selectColumnStnAMBI <- renderUI({
 
+
+
       val_choices <- sheet_columns_ambi()
       val_sel <- match_list(val_choices, "st")
       val_choices <- c("none",val_choices)
@@ -551,6 +553,9 @@ function(input, output, session) {
 
   output$selectColumnAMBI <- renderUI({
 
+
+    req(sheet_columns_ambi())
+
     val_choices <- sheet_columns_ambi()
     val_sel <- match_list(val_choices, "ambi")
     res <- tagList(selectInput(
@@ -565,6 +570,8 @@ function(input, output, session) {
   # --------------  output$selectColumnH (AMBI input) ------------------------
 
   output$selectColumnH <- renderUI({
+
+    req(sheet_columns_ambi())
     val_choices <- sheet_columns_ambi()
     val_sel <- match_list(val_choices, "h")
     res <- tagList(selectInput(
@@ -579,6 +586,9 @@ function(input, output, session) {
   # --------------  output$selectColumnS ------------------------
 
   output$selectColumnS <- renderUI({
+
+
+    req(sheet_columns_ambi())
     val_choices <- sheet_columns_ambi()
     val_stn <- match_list(val_choices, "st")
     val_choices2 <- val_choices[!val_choices == val_stn]
@@ -2147,8 +2157,12 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
                      input$colS)
 
     df <- xl_data_ambi()
-    #browser()
+
     for(i in (1:length(cols_select))){
+      if(!cols_select[i] %in% names(df)){
+        df <- df %>%
+          mutate(!!cols_select[i]:= NA )
+      }
       if(length(cols_select[cols_select==cols_select[i]])>1){
         if(cols_select[i]!="none"){
           new_name <- paste0(cols_select[i], i)
