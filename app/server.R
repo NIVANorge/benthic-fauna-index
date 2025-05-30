@@ -16,6 +16,8 @@ library(shinyjs)
 source("functions.R")
 
 
+table_font <- "0.7rem"
+
 # status class boundaries
 dfbnds <- read.table("class_boundaries.txt", sep=";", header=T)
 
@@ -28,6 +30,7 @@ function(input, output, session) {
 
   vals <- reactiveValues()
 
+  # --------------  xl_sheets() ------------------------
 
   xl_sheets <- reactive({
     file <- input$file1
@@ -48,7 +51,28 @@ function(input, output, session) {
   })
 
 
+  # --------------  xl_sheets_ambi() ------------------------
 
+  xl_sheets_ambi <- reactive({
+    file_ambi <- input$file_ambi
+    ext <- tools::file_ext(file_ambi$datapath)
+
+    req(file_ambi)
+    validate(need(ext %in% c("xlsx","xlsm","xls"), "Please select an Excel file to read"))
+
+    progress <- Progress$new(session, min=1, max=10)
+    on.exit(progress$close())
+
+    progress$set(message = 'Reading Excel data',
+                 detail = "shouldn't take long...")
+
+    list_df <- read_excel_all(file_ambi$datapath, header=T, progress)
+
+    return(list_df)
+  })
+
+
+  # --------------  xl_names() ------------------------
 
   xl_names <- reactive({
     req(xl_sheets())
@@ -56,12 +80,37 @@ function(input, output, session) {
     return(sheet_names)
   })
 
+
+  # --------------  xl_names_ambi() ------------------------
+
+  xl_names_ambi <- reactive({
+    req(xl_sheets_ambi())
+    sheet_names <- names(xl_sheets_ambi())
+    return(sheet_names)
+  })
+
+
+  # --------------  xl_data() ------------------------
+
   xl_data <- reactive({
     req(xl_sheets())
     req(input$selectedSheet)
     df_list <- xl_sheets()
     return(df_list[[input$selectedSheet]])
   })
+
+
+  # --------------  xl_data_ambi() ------------------------
+
+  xl_data_ambi <- reactive({
+    req(xl_sheets_ambi())
+    req(input$selectedSheet_ambi)
+    df_list <- xl_sheets_ambi()
+    return(df_list[[input$selectedSheet_ambi]])
+  })
+
+
+  # --------------  sheet_options() ------------------------
 
   sheet_options <- reactive({
     req(xl_names())
@@ -73,6 +122,9 @@ function(input, output, session) {
       return(defaults())
     }
   })
+
+
+  # --------------  station_column() ------------------------
 
   station_data <- reactive({
     req(xl_data())
@@ -90,6 +142,9 @@ function(input, output, session) {
     }
   })
 
+
+  # --------------  station_column() ------------------------
+
   station_column <- reactive({
     req(xl_data())
     df <- xl_data()
@@ -106,6 +161,7 @@ function(input, output, session) {
     return(stncol)
   })
 
+  # --------------  data_structures() ------------------------
 
   data_structures <- reactive({
     req(xl_names())
@@ -113,6 +169,8 @@ function(input, output, session) {
       label_wide_station,
       label_wide_species)
   })
+
+  # --------------  stations_ok() ------------------------
 
   stations_ok <- reactive({
     req(station_column())
@@ -127,6 +185,9 @@ function(input, output, session) {
     }
     return(list(ok=ok, msg=msg))
   })
+
+
+  # --------------  observe(input$selectForm) ------------------------
 
   observe({
     req(input$selectForm)
@@ -160,6 +221,7 @@ function(input, output, session) {
 
   })
 
+  # --------------  output$selectSheet (Observations input) ------------------------
 
   output$selectSheet <- renderUI({
     req(xl_names())
@@ -171,6 +233,21 @@ function(input, output, session) {
       selectize = T
       ))
   })
+
+  # --------------  output$selectSheetAMBI (AMBI input) ------------------------
+
+  output$selectSheetAMBI <- renderUI({
+    req(xl_names_ambi())
+    tagList(selectInput(
+      "selectedSheet_ambi",
+      "Select sheet:",
+      choices = xl_names_ambi(),
+      #selected = sheet_initial(),
+      selectize = T
+    ))
+  })
+
+  # --------------  output$selectStructure (Observations input) ------------------------
 
   output$selectStructure <- renderUI({
     req(xl_data())
@@ -186,6 +263,7 @@ function(input, output, session) {
     ))
  })
 
+  # --------------  output$checkHeader (Observations input) ------------------------
 
   output$checkHeader <- renderUI({
     req(input$selectForm)
@@ -207,6 +285,39 @@ function(input, output, session) {
       NULL
     }
   })
+
+  # --------------  output$selectColumnRowGroup (Observations input) ------------------------
+
+  output$selectColumnRowGroup <- renderUI({
+    req(sheet_rows())
+    req(sheet_columns())
+
+    if(input$selectForm==label_wide_station){
+      res <- NULL
+    }else{
+      val_choices <- sheet_columns()
+      if(input$selectForm==label_wide_species){
+        #val_sel <- val_choices[1]
+        val_sel <- "none"
+        val_choices <- c("none",val_choices)
+      }else{
+        #val_sel <- match_list(val_choices, "ty")
+        val_sel <- "none"
+        val_choices <- c("none",val_choices)
+      }
+
+      res <- tagList(selectInput(
+        "colrowGroup",
+        "M-AMBI type column:",
+        choices = val_choices,
+        selectize = T,
+        selected = val_sel
+      ))
+    }
+
+  })
+
+  # --------------  output$selectColumnRowStn (Observations input) ------------------------
 
   output$selectColumnRowStn <- renderUI({
     req(sheet_rows())
@@ -244,6 +355,8 @@ function(input, output, session) {
 
 })
 
+  # --------------  output$selectColumnRowRep (Observations input) ------------------------
+
   output$selectColumnRowRep <- renderUI({
     req(sheet_rows())
     req(sheet_columns())
@@ -275,6 +388,8 @@ function(input, output, session) {
     }
     return(res)
 })
+
+  # --------------  output$selectColumnRowSpecies (Observations input) ------------------------
 
   output$selectColumnRowSpecies <- renderUI({
     req(sheet_rows())
@@ -308,6 +423,8 @@ function(input, output, session) {
     return(res)
   })
 
+  # --------------  output$selectColumnRowCount (Observations input) ------------------------
+
   output$selectColumnRowCount <- renderUI({
     req(sheet_rows())
     req(sheet_columns())
@@ -334,6 +451,157 @@ function(input, output, session) {
     return(res)
   })
 
+  # --------------  output$selectColumnStnAMBI (AMBI input) ------------------------
+
+  output$selectColumnStnAMBI <- renderUI({
+
+      val_choices <- sheet_columns_ambi()
+      val_sel <- match_list(val_choices, "st")
+      val_choices <- c("none",val_choices)
+
+      res <- tagList(selectInput(
+        "colStnAMBI",
+        "Station column:",
+        choices = val_choices,
+        selectize = T,
+        selected = val_sel
+      ))
+
+  })
+
+  # --------------  output$selectColumnGroupAMBI (AMBI input) ------------------------
+
+  output$selectColumnGroupAMBI <- renderUI({
+
+    val_choices <- sheet_columns_ambi()
+   #val_sel <- match_list(val_choices, "st")
+    val_sel <- "none"
+    val_choices <- c("none",val_choices)
+
+    res <- tagList(selectInput(
+      "colGroupAMBI",
+      "M-AMBI type column:",
+      choices = val_choices,
+      selectize = T,
+      selected = val_sel
+    ))
+
+  })
+
+  # --------------  output$selectAMBIsource (AMBI input) ------------------------
+
+  output$selectAMBIsource <- renderUI({
+
+    source_names <- c("current calculations",
+      "load AMBI results from file")
+    source_ids <- c(1,2)
+
+
+    res <- tagList(radioButtons(
+      inputId="radioAMBI",
+      label=NULL,
+      choiceNames = source_names,
+      choiceValues = source_ids,
+      selected = source_ids[1]
+    ))
+  })
+
+  # --------------  observe(input$selectAMBIsource) ------------------------
+
+  observe({
+    req(input$radioAMBI)
+    accordion_panel_remove(
+      id="acc_mambi_input",
+      "panel_mambi_import"
+    )
+
+    if(input$radioAMBI == "2"){
+      #
+      #}else{
+      accordion_panel_insert(
+        id="acc_mambi_input",
+        panel= accordion_panel(
+          value = "panel_mambi_import",
+          title = "Import AMBI results",
+          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+          verticalLayout(
+            fileInput("file_ambi",
+                      "Select AMBI results file",
+                      accept=c(".xlsx",".xls",".xlsm"),
+                      width='100%'),
+            uiOutput("selectSheetAMBI"),
+            uiOutput("selectColumnStnAMBI"),
+            uiOutput("selectColumnAMBI"),
+            uiOutput("selectColumnH"),
+            uiOutput("selectColumnS"),
+            uiOutput("selectColumnGroupAMBI"))
+        ),
+        target = "panel_mambi_source",
+        position = "after"
+      )
+
+      accordion_panel_open("acc_mambi_input","panel_mambi_import")
+
+    }
+
+  })
+
+
+  # --------------  output$selectColumnAMBI (AMBI input) ------------------------
+
+  output$selectColumnAMBI <- renderUI({
+
+    val_choices <- sheet_columns_ambi()
+    val_sel <- match_list(val_choices, "ambi")
+    res <- tagList(selectInput(
+      "colAMBI",
+      "AMBI column:",
+      choices = val_choices,
+      selectize = T,
+      selected = val_sel
+    ))
+  })
+
+  # --------------  output$selectColumnH (AMBI input) ------------------------
+
+  output$selectColumnH <- renderUI({
+    val_choices <- sheet_columns_ambi()
+    val_sel <- match_list(val_choices, "h")
+    res <- tagList(selectInput(
+      "colH",
+      "H column:",
+      choices = val_choices,
+      selectize = T,
+      selected = val_sel
+    ))
+  })
+
+  # --------------  output$selectColumnS ------------------------
+
+  output$selectColumnS <- renderUI({
+    val_choices <- sheet_columns_ambi()
+    val_stn <- match_list(val_choices, "st")
+    val_choices2 <- val_choices[!val_choices == val_stn]
+    val_sel <- match_list(val_choices2, "s")
+    res <- tagList(selectInput(
+      "colS",
+      "S column:",
+      choices = val_choices,
+      selectize = T,
+      selected = val_sel
+    ))
+  })
+
+
+  # --------------  sheet_columns_ambi() ------------------------
+
+  sheet_columns_ambi <- reactive({
+    req(xl_data_ambi())
+    names <- names(xl_data_ambi())
+    return(names)
+  })
+
+  # --------------  output$obs_warning ------------------------
 
   output$obs_warning <- renderUI({
 
@@ -360,6 +628,7 @@ function(input, output, session) {
     }
   })
 
+  # --------------  sheet_columns() ------------------------
 
   sheet_columns <- reactive({
 
@@ -381,6 +650,8 @@ function(input, output, session) {
     return(cols)
   })
 
+  # --------------  sheet_rows() ------------------------
+
   sheet_rows <- reactive({
 
     df <- req(obs_data_raw())
@@ -396,6 +667,8 @@ function(input, output, session) {
     #rows <- c("none", rows)
     return(rows)
   })
+
+  # --------------  obs_data_raw() ------------------------
 
   obs_data_raw <- reactive({
 
@@ -423,6 +696,8 @@ function(input, output, session) {
   })
 
 
+  # --------------  output$observationsraw ------------------------
+
   output$observationsraw <-renderReactable({
 
     #req(stations_ok())
@@ -448,7 +723,7 @@ function(input, output, session) {
     }else{
       reactable(df,
                 sortable = F,
-                style = list(fontSize = "0.8rem"),
+                style = list(fontSize = table_font),
                 columns = list(
                 ), # columns
                 defaultColDef = col_default,
@@ -466,7 +741,7 @@ function(input, output, session) {
     }
   })
 
-
+  # --------------  obs_data() ------------------------
 
   obs_data <- reactive({
     req(input$selectedSheet)
@@ -481,6 +756,9 @@ function(input, output, session) {
     idRep <- input$colrowRep
     idSpec <- input$colrowSpec
     idCount <- input$colrowCount
+    idGrp <- input$colrowGroup
+
+    idGrp <- ifelse(is.null(idGrp),"none",idGrp)
 
     if(input$selectForm==label_long){
       has_header <- input$hasHeader
@@ -495,15 +773,20 @@ function(input, output, session) {
                  detail = "shouldn't take long...")
 
     df <- reform_data(df, form,
-                      idStn, idRep, idSpec, idCount,
+                      idStn, idRep, idSpec, idCount, idGrp,
                       label_long,
                       label_wide_species,
                       label_wide_station,
                       has_header,
                       progress)
+
+
     return(df)
 
   })
+
+
+  # --------------  observe(obs_data()) ------------------------
 
   observe({
     obs_data()
@@ -511,6 +794,7 @@ function(input, output, session) {
   })
 
 
+  # -------------- output$observations ------------------------
 
   output$observations <-renderReactable({
 
@@ -526,7 +810,7 @@ function(input, output, session) {
       reactable(df,
                 sortable = T,
                 filterable = T,
-                style = list(fontSize = "0.8rem"),
+                style = list(fontSize = table_font),
                 columns = list(
                   group0 = colDef(show=FALSE)
                 ),
@@ -561,6 +845,8 @@ function(input, output, session) {
 
   })
 
+  # -------------- output$tblSpecCount ------------------------
+
   output$tblSpecCount <- renderReactable({
     req(species_summary())
     df <- species_summary()
@@ -573,7 +859,7 @@ function(input, output, session) {
 
     reactable(df,
               sortable = F,
-              style = list(fontSize = "0.8rem"),
+              style = list(fontSize = table_font),
               columns = list(
                 species = colDef(name="Species"),
                 n = colDef(name = ntotal, minWidth = 50)
@@ -591,7 +877,7 @@ function(input, output, session) {
               ))
   })
 
-
+  # -------------- output$tblSpec ------------------------
 
   output$tblSpec <- renderReactable({
 
@@ -636,7 +922,7 @@ function(input, output, session) {
                 #width = 400,
                 filterable = F,
                 sortable = T,
-                style = list(fontSize = "0.8rem"),
+                style = list(fontSize = table_font),
                 #rowStyle =
                 columns = list(
                   Species = colDef(minWidth = 150,
@@ -664,6 +950,7 @@ function(input, output, session) {
                   group0= colDef(show = F),
                   RA = colDef(show=F),
                   edit = colDef(
+                    width = 50,
                     headerStyle = "border-right:none;border-top:none;border-bottom:none;background:none;",
                     name = "",
                     sortable = FALSE,
@@ -678,6 +965,7 @@ function(input, output, session) {
 
                   ),
                  reset = colDef(
+                   width = 50,
                    headerStyle = "border:none;background:none;",
                    name = "",
                    sortable = FALSE,
@@ -730,6 +1018,7 @@ function(input, output, session) {
     NULL
   }})
 
+  # -------------- matched_spec() ------------------------
 
   matched_spec <- reactive({
 
@@ -761,6 +1050,8 @@ function(input, output, session) {
     return(df)
   })
 
+  # -------------- species_displayed() ------------------------
+
   species_displayed <- reactive({
 
 
@@ -781,6 +1072,9 @@ function(input, output, session) {
 
     return(df)
   })
+
+
+  # -------------- observeEvent(input$edit_species) ------------------------
 
   observeEvent(input$edit_species, {
 
@@ -822,6 +1116,8 @@ function(input, output, session) {
 
   })
 
+  # -------------- change_group() ------------------------
+
   change_group <- function( selected=NULL, species=NA) {
     modalDialog(
       size = "s",
@@ -861,6 +1157,7 @@ function(input, output, session) {
     )
   }
 
+  # -------------- match_row() ------------------------
 
   match_row <- reactive({
 
@@ -893,6 +1190,8 @@ function(input, output, session) {
     }
   })
 
+  # -------------- observeEvent(input$new_group) ------------------------
+
   observeEvent(input$new_group, {
 
     action_manual <- isolate(vals$manual)
@@ -916,6 +1215,7 @@ function(input, output, session) {
 
   })
 
+  # -------------- observeEvent(input$choose_species) ------------------------
 
   observeEvent(input$choose_species, {
 
@@ -939,6 +1239,8 @@ function(input, output, session) {
 
   })
 
+
+  # -------------- output$tblSimilar ------------------------
 
   output$tblSimilar <- renderReactable({
 
@@ -965,7 +1267,7 @@ function(input, output, session) {
         res <- reactable(df_list,
                          selection = "single",
                   sortable = F,
-                  style = list(fontSize = "0.7rem"),
+                  style = list(fontSize = table_font),
                   columns = list(
                     species = colDef(name="Species",
                                      minWidth = 200,
@@ -1011,6 +1313,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     res
 })
 
+  # -------------- observeEvent(input$$change) ------------------------
 
   observeEvent(input$change, {
 
@@ -1049,6 +1352,9 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   })
 
+
+  # ------- observe(ambi_res()) ------
+
   observe({
     res <- ambi_res()
 
@@ -1061,14 +1367,40 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   })
 
 
+  # ------- observe(mambi_res()) ------
+
+  observe({
+
+    res <- mambi_res()
+
+
+    if(is.null(res)){
+      #reset M-AMBI reference conditions
+      vals$changes_refcond <- NULL
+
+      # disable the downdload button on page load
+      shinyjs::hide("btnDownloadInds2")
+    }else{
+      if(nrow(res)==0){
+        shinyjs::hide("btnDownloadInds2")
+      }else{
+        shinyjs::show("btnDownloadInds2")
+      }
+    }
+  })
+
+
 #  limits_AMBI = c(bad = 6, high = 0),
 #  limits_H = c(bad = 0, high = NA),
 #  limits_S = c(bad = 0, high = NA),
 #  bounds = c(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
 
+
+  # -------------- output$chkMAMBI ------------------------
+
   output$chkMAMBI <- renderUI({
 
-    req(ambi_res())
+    req(ambi_res_mambi())
 
     tagList(checkboxInput(
       "doMAMBI",
@@ -1077,6 +1409,9 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 #      width = "100%"
     ))
   })
+
+
+  # -------------- observeEvent(input$doMAMBI) ------------------------
 
   observeEvent(input$doMAMBI, {
 
@@ -1112,18 +1447,95 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   }, ignoreInit = TRUE, ignoreNULL=FALSE)
 
+  # -------------- bounds_mambi() ------------------------
+
   bounds_mambi <- reactive({
-    c(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
+    data.frame(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
   })
 
+  # -------------- refconds_mambi() ------------------------
+
+  refconds_mambi <- reactive({
+    req(ambi_res_mambi())
+
+    df <- ambi_res_mambi()$AMBI
+    if(is.null(df)){
+      return(NULL)
+    }
+    df <- df %>%
+      filter(!is.na(AMBI))
+    if(nrow(df)==0){
+      return(NULL)
+    }
+
+    check_cols <- c("AMBI","H","S")
+    check_cols <- check_cols[check_cols %in% names(df)]
+    if(length(check_cols)<3){
+      return(NULL)
+    }
+
+# browser()
+    if("MAMBIgrp" %in% names(df)){
+      df <- df %>%
+        group_by(MAMBIgrp) %>%
+        summarise(H_max=max(H,na.rm=T),
+                  S_max=max(S,na.rm=T),
+                  .groups = "drop")
+    }else{
+      df <- df %>%
+        summarise(H_max=max(H,na.rm=T),
+                  S_max=max(S,na.rm=T))
+    }
+
+    df <- df %>%
+      mutate(refcond_H = H_max,
+             refcond_S = S_max,
+             modified_H = 0,
+             modified_S = 0)
+
+    # browser()
+    if(!is.null(vals$changes_refcond)){
+      df_changes <- vals$changes_refcond
+      if("MAMBIgrp" %in% names(df)){
+        if("MAMBIgrp" %in% names(df_changes)){
+          df <- df %>%
+            left_join(df_changes, by="MAMBIgrp")
+        }else{
+          df <- df %>%
+            mutate(H_new=NA, S_new=NA)
+        }
+      }else{
+        if("MAMBIgrp" %in% names(df_changes)){
+          df_changes <- df_changes %>%
+            filter(is.na(MAMBIgrp))
+          if(nrow(df_changes)==0){
+            df_changes <- data.frame(H_new=NA, S_new=NA)
+          }
+          }
+          df <- df %>%
+            bind_cols(df_changes)
+      }
+      df <- df %>%
+        mutate(refcond_H = ifelse(is.na(H_new), refcond_H, H_new),
+               refcond_S = ifelse(is.na(S_new), refcond_S, S_new),
+               modified_H = ifelse(is.na(H_new), 0, 1),
+               modified_S = ifelse(is.na(S_new), 0 ,1))
+
+    }
+
+    return(df)
+  })
+
+  # -------------- mambi_res() ------------------------
 
   mambi_res <- reactive({
 
-    req(ambi_res())
+    req(ambi_res_mambi())
 
-    df <- ambi_res()[["AMBI"]]
+    df <- ambi_res_mambi()[["AMBI"]]
 
     bounds_mambi <- bounds_mambi()
+    refconds_mambi <- refconds_mambi()
 
     if(is.null(df)){
       return(NULL)
@@ -1142,73 +1554,432 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         }
       }
 
-
-      mambi <- tryCatch({
-        ambiR::MAMBI(df, by=by_var, bounds = bounds_mambi)
-      },warning = function(w){
-        message('Warning from MAMBI()!')
-        print(w)
-      },error = function(e){
-        message('Error in MAMBI()!')
-        print(e)
-        return(NULL)
-      })
-
-      if(is.null(mambi)){
-        return(res=list(err="Error calculating M-AMBI"))
-      }else{
-        mambi <- sort_results(mambi)
-
-        # mambi <- mambi %>%
-        #   rowwise() %>%
-        #   mutate(Status=.class_names()[.classID(EQR)]) %>%
-        #   ungroup()
-
-
-        bounds<- data.frame(
-          Bounds=c("H/G","G/M","M/P","P/B"),
-          MAMBI = c(bounds_mambi["HG"], bounds_mambi["GM"],
-                    bounds_mambi["MP"], bounds_mambi["PB"]))
-
-        return(res=list("MAMBI"=mambi, "bounds"=bounds))
-      }
+      mambi <- batch_mambi(df, by=by_var,
+                           bounds = bounds_mambi,
+                           refconds = refconds_mambi)
+      return(mambi)
 
       }
-     #}
   })
 
 
+  output$txtRefcon <- renderUI({
+
+    req(refconds_mambi())
+
+    if(is.null(refconds_mambi())){
+      tagList(p(""))
+    }else{
+          tagList(p("Default values for reference conditions for Shannon Wiener diversity index (H')
+                     and Species richness (S) are obtained from the maximum values calculated from
+                     observation data."),
+            p("Click on a value to modify it and specify a new reference condition."))
+
+    }
+  })
+
+  # -------------- output$tblRefCond ------------------------
+  output$tblRefCond<- renderReactable({
+
+     df <- refconds_mambi()
+
+     if(is.null(df)){
+       return(NULL)
+     }
+
+     df <- df %>%
+       mutate(reset=ifelse(refcond_H==H_max, 0, 1))  %>%
+       mutate(reset=ifelse(refcond_S==S_max, reset, 1))
+
+     show_mambi_grp <- FALSE
+
+     if("MAMBIgrp" %in% names(df)){
+       grp <- df$MAMBIgrp
+       grp <- grp[!is.na(grp)]
+       if(length(grp)>0){
+         show_mambi_grp <- TRUE
+       }
+     }else{
+       df <- df %>%
+         mutate(MAMBIgrp="x")
+     }
+     df <- df %>%
+       relocate(MAMBIgrp)
+
+     reactable(df,
+               sortable = F,
+               #onClick = "select",
+               style = list(fontSize = "1em"),
+               columns = list(
+                 MAMBIgrp = colDef(html = TRUE,
+                                   header= JS('function() {
+        return `<div>Type</div><div>M-AMBI</div>`
+      }'),
+                                   show=show_mambi_grp,
+                                   minWidth = 70),
+                 refcond_H = colDef(name="H'",
+                                    show=T,
+                                    minWidth = 50,
+                            format=colFormat(digits = 3),
+                            style=JS("function(rowInfo) {
+                      if(rowInfo.values['refcond_H'] != rowInfo.values['H_max']){
+                        return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
+                      }else{
+                          return
+                        }
+                      }")),
+                 refcond_S = colDef(name="S",
+                                    show=T,
+                                    minWidth = 50,
+                            format=colFormat(digits = 0),
+                            style=JS("function(rowInfo) {
+                      if(rowInfo.values['refcond_S'] != rowInfo.values['S_max']){
+                        return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
+                      }else{
+                          return
+                        }
+                      }")),
+
+                 reset = colDef(
+                   show=T,
+                   minWidth = 60,
+                   headerStyle = "border:none;background:none;",
+                   name = "",
+                   sortable = FALSE,
+                   style = "border-right:none;border-top:none;",
+                   #style = "border-left:none;border-right:none;border-top:none;",
+                   cell = function(value){
+                     if(value==1){
+                       htmltools::tags$button("Reset")
+                     }else{
+                       ""
+                     }
+                   }
+
+                 )
+
+               ), # columns
+               defaultColDef = colDef(minWidth = 70, show=F, vAlign = "bottom"),
+               compact = TRUE,
+               wrap = FALSE,
+               fullWidth = F,
+               resizable = F,
+               bordered = TRUE,
+               defaultPageSize = 15,
+               highlight = TRUE,
+               theme = reactableTheme(
+                 headerStyle = list(background = "#f7f7f8"),
+                 rowSelectedStyle=list(backgroundColor = "#c0d6e4",
+                                       color = "#000"),
+                 cellPadding = "3px 1px"
+               ),
+               onClick = JS("function(rowInfo, column) {
+    // Only handle click events on the 'details' column
+    // if (column.id != 'edit' && column.id != 'reset') {
+    //   return
+    // }
+    if (column.id == 'MAMBIgrp') {
+       return
+     }
+
+
+      // Send the click event to Shiny, which will be available in input$show_details
+      // Note that the row index starts at 0 in JavaScript, so we add 1
+
+
+
+      if (window.Shiny) {
+        if(column.id == 'refcond_H'){
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'refcond_H', val: rowInfo.values['refcond_H'] }, { priority: 'event' })
+        }else if(column.id == 'refcond_S'){
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'refcond_S', val: rowInfo.values['refcond_S'] }, { priority: 'event' })
+        }else{
+             Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'reset', val: 0 }, { priority: 'event' })
+            }
+      }
+
+  }")
+     )
+
+
+  })
+
+
+
+  # -------------- observeEvent(input$edit_refcond) ------------------------
+
+  observeEvent(input$edit_refcond, {
+    #browser()
+    req(refconds_mambi())
+
+    df <- refconds_mambi()
+
+    ix <- input$edit_refcond %>% unlist()
+    metric <- ix[2]
+    val <- ix[3] %>% as.numeric()
+
+    val <- ifelse(metric=="refcond_H", format(val, digits=4), val)
+
+    ix <- ix[1] %>% as.numeric()
+
+
+    if("MAMBIgrp" %in% names(df)){
+      name_grp <- df$MAMBIgrp[ix]
+      name_grp <- paste0(" (", name_grp,")")
+    }else{
+      name_grp <-""
+    }
+
+
+    if(metric=="reset"){
+
+      df_changes <- vals$changes_refcond
+      df_refcon <- isolate(refconds_mambi())
+
+      ix <- input$edit_refcond %>% unlist()
+      ix <- ix[1] %>% as.numeric()
+
+      if(!is.null(df_changes)){
+
+        if("MAMBIgrp" %in% names(df_refcon)){
+         match_grp <-  df_refcon$MAMBIgrp[ix]
+         match_grp <- ifelse(is.na(match_grp),"",match_grp)
+         list_grp <- df_changes$MAMBIgrp
+         list_grp <- ifelse(is.na(list_grp),"",list_grp)
+
+         ix <- (1:nrow(df_changes))
+         ix <- ix[list_grp==match_grp]
+
+        }
+
+        df_changes[ix,"S_new"] <- NA
+        df_changes[ix,"H_new"] <- NA
+      }
+
+      vals$changes_refcond <- df_changes
+
+    }else{
+      title <- ifelse(metric=="refcond_H","H'- Shannon Wiener diversity index","")
+      title <- ifelse(metric=="refcond_S","S - Species richness",title)
+      title <- paste0(title, name_grp)
+      metric <- paste0("new", metric)
+      showModal(change_refcond(metric=metric, value=val, title=title))
+
+    }
+
+  })
+
+  # -------------- change_refcond() ------------------------
+
+  change_refcond <- function(metric, value, title) {
+
+    modalDialog(
+      size = "s",
+
+      tags$p(tags$em(title)),
+      tags$div(
+        tagList(textInput(
+          inputId = metric,
+          label=  NULL,
+          value = "",
+          width= "100px",
+          placeholder = value
+        ))
+      ),
+      footer = tagList(
+        actionButton("changeRefCond", "Apply"),
+        modalButton("Cancel")
+      )
+    )
+  }
+
+
+
+  # -------------- observeEvent(input$$changeRefCond) ------------------------
+
+  observeEvent(input$changeRefCond, {
+    # browser()
+    removeModal()
+
+    new_s <- input$newrefcond_S
+    new_h <- input$newrefcond_H
+
+    ix <- input$edit_refcond %>% unlist()
+    metric <- ix[2]
+    ix <- ix[1] %>% as.numeric()
+
+    bChanged <- F
+
+    pattern <- "([[:digit:]]*\\.*[[:digit:]]*)"
+
+    if(metric=="refcond_H"){
+      if(!is.null(new_h)){
+      if(new_h!=""){
+        bChanged <- T
+        value <- regmatches(new_h,regexpr(pattern,new_h))
+        value <- ifelse(value=="",NA, as.numeric(value))
+        metric <- "H_new"
+        }
+      }
+    }
+    if(metric=="refcond_S"){
+      if(!is.null(new_s)){
+        if(new_s!=""){
+          bChanged <- T
+          value <- regmatches(new_s,regexpr(pattern,new_s))
+          value <- ifelse(value=="",NA, as.numeric(value))
+          metric <- "S_new"
+        }
+      }
+    }
+    if(bChanged==T){
+
+
+      df_changes <- vals$changes_refcond
+      df_refcon <- isolate(refconds_mambi())
+
+
+      if(is.null(df_changes)){
+        df_changes <- df_refcon
+        if("MAMBIgrp" %in% names(df_changes)){
+          df_changes <- df_changes %>%
+            select(MAMBIgrp) %>%
+            mutate(H_new=NA, S_new=NA)
+        }else{
+          df_changes <- data.frame(H_new=NA, S_new=NA)
+        }
+      }else{
+        if("MAMBIgrp" %in% names(df_changes)){
+          if(!"MAMBIgrp" %in% names(df_refcon)){
+            ix <- (1:nrow(df_changes))
+            ix <- ix[is.na(df_changes$MAMBIgrp)]
+
+            if(length(ix)==0){
+              dfx <- data.frame(MAMBIgrp=NA,
+                               H_new=NA,
+                               S_new=NA)
+              df_changes <- df_changes %>%
+                bind_rows(dfx)
+
+              ix <- nrow(df_changes)
+            }
+          }else{
+            match_grp <-  df_refcon$MAMBIgrp[ix]
+            match_grp <- ifelse(is.na(match_grp),"",match_grp)
+            list_grp <- df_changes$MAMBIgrp
+            list_grp <- ifelse(is.na(list_grp),"",list_grp)
+
+            ix2 <- (1:nrow(df_changes))
+            ix2 <- ix2[list_grp==match_grp]
+
+            if(length(ix2)==0){
+              dfx <- df_refcon %>%
+                distinct(MAMBIgrp) %>%
+                mutate(H_new=NA, S_new=NA)
+              df_changes <- dfx %>%
+                bind_rows(df_changes)
+            }else{
+              ix <- ix2
+            }
+          }
+        }else{
+          if("MAMBIgrp" %in% names(df_refcon)){
+            dfx <- df_refcon %>%
+              distinct(MAMBIgrp) %>%
+              mutate(H_new=NA, S_new=NA)
+            df_changes <- dfx %>%
+              bind_rows(df_changes)
+          }else{
+            xxxx <- 1
+            # needed?"
+
+          }
+
+        }
+      }
+
+
+      df_changes[ix, metric] <- value
+
+      vals$changes_refcond <- df_changes
+    }
+  })
+
+
+
+  # -------------- output$tblMAMBI ------------------------
+
   output$tblMAMBI <- renderReactable({
 
-    req(ambi_res())
+    req(ambi_res_mambi())
     req(mambi_res())
 
-    df <- mambi_res()$MAMBI
-    df_main <- ambi_res()[["AMBI"]]
+    #df <- mambi_res()$MAMBI
+    df <- mambi_res()
+    df_main <- ambi_res_mambi()[["AMBI"]]
 
     if(is.null(df)){
       return(NULL)
     }
+    if(nrow(df)==0){
+      df <- reactable(data.frame(msg="...check your input"),
+                sortable = F,
+                columns = list(
+                  msg = colDef(show=T,
+                               name="Error calculating M-AMBI")),
+                style = list(fontSize = "2em"),
+                defaultColDef = colDef(
+                  minWidth = 60,
+                  show=T,
+                  vAlign = "bottom"),
+                compact = TRUE,
+                wrap = FALSE,
+                fullWidth = T,
+                resizable = F,
+                bordered = F,
+                borderless = TRUE,
+                defaultPageSize = 15,
+                highlight = F,
+                theme = reactableTheme(
+                  headerStyle = list(
+                    borderColor = "#FFFFFF"
+                    ))
+      )
+      return(df)
 
-    sel <- ambi_selected()
+    }
+
+
+    # sel <- ambi_selected()
 
 
     stn_filter <- TRUE
 
     if("Station" %in% names(df_main)){
       stns <- df_main$Station
-      sel <- ifelse(is.null(sel),"",stns[sel])
-      if(sel!=""){
-        df <- df %>%
-          filter(Station == sel)
-        stn_filter <- FALSE
-      }
+
+      # sel <- ifelse(is.null(sel),"",stns[sel])
+      # if(sel!=""){
+      #   df <- df %>%
+      #     filter(Station == sel)
+      #   stn_filter <- FALSE
+      # }
+
       show_stn <- TRUE
     }else{
       show_stn <- FALSE
       df <- df %>%
         mutate(Station="x")
       sel <- ""
+    }
+
+
+    if("MAMBIgrp" %in% names(df)){
+      show_mambi_grp <- TRUE
+    }else{
+      show_mambi_grp <- FALSE
+      df <- df %>%
+        mutate(MAMBIgrp="x")
     }
 
     df <- df %>%
@@ -1233,18 +2004,29 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     # Bounds AMBI H S x y z MAMBI EQR
     reactable(df,
               sortable = F,
-              style = list(fontSize = "0.8rem"),
+              style = list(fontSize = table_font),
               rowStyle = JS("function(rowInfo) {
     if(rowInfo.values['Bounds']!=''){
       return { color: 'rgba(0, 0, 0, 0.5)', backgroundColor:'rgba(0, 0, 0, 0.03)'}
     }
   }"),        showSortable=T,
               columns = list(
-                Station = colDef(show=show_stn, minWidth = 100,
+                HG = colDef(show=F),
+                GM = colDef(show=F),
+                MP = colDef(show=F),
+                PB = colDef(show=F),
+                MAMBIgrp = colDef(html = TRUE,
+                                  header= JS('function() {
+        return `<div>Type</div><div>M-AMBI</div>`
+      }'),
+                                  show=show_mambi_grp, minWidth = 70,
+                                  sortable = TRUE, filterable = TRUE),
+                Station = colDef(show=show_stn, minWidth = 70,
                                  filterable = TRUE,
                                  sortable = TRUE),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
-                H = colDef(format=colFormat(digits = 3), minWidth = 50),
+                H = colDef(name="H'",
+                           format=colFormat(digits = 3), minWidth = 50),
                 x = colDef(format=colFormat(digits = 3), minWidth = 50),
                 y = colDef(format=colFormat(digits = 3), minWidth = 50),
                 z = colDef(format=colFormat(digits = 3), minWidth = 50),
@@ -1288,6 +2070,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
 
 
+  # -------------- output$selectShowSpecies ------------------------
 
 
   output$selectShowSpecies <- renderUI({
@@ -1310,6 +2093,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     ))
   })
 
+  # -------------- ambi_first() ------------------------
 
   ambi_first <- reactive({
 
@@ -1322,12 +2106,14 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
 
 
+  # -------------- ambi_res() ------------------------
 
   ambi_res <- reactive({
 
     req(vals$first_click)
     req(obs_data())
     req(ambi_first())
+
     #input$start_calculation
     is_clicked <- vals$clicked
     is_clicked <- ifelse(is.null(is_clicked), F, is_clicked)
@@ -1344,9 +2130,75 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   })
 
+  # -------------- ambi_res_file() ------------------------
+
+  ambi_res_file <- reactive({
+
+    req(xl_data_ambi())
+    req(input$colH)
+    req(input$colS)
+    req(input$colAMBI)
+    req(input$colStnAMBI)
+
+    cols_select <- c(input$colGroupAMBI,
+                     input$colStnAMBI,
+                     input$colAMBI,
+                     input$colH,
+                     input$colS)
+
+    df <- xl_data_ambi()
+    #browser()
+    for(i in (1:length(cols_select))){
+      if(length(cols_select[cols_select==cols_select[i]])>1){
+        if(cols_select[i]!="none"){
+          new_name <- paste0(cols_select[i], i)
+          df <- df %>%
+            mutate(!!new_name:= !!as.name(cols_select[i]))
+          cols_select[i]<- new_name
+        }
+      }
+    }
+
+    colnames <- c("MAMBIgrp",
+                  "Station",
+                  "AMBI",
+                  "H",
+                  "S")
+
+    colnames <- colnames[cols_select!="none"]
+    cols_select <- cols_select[cols_select!="none"]
+
+
+    df <- df %>%
+      select(any_of(cols_select))
+
+    names(df) <- colnames
+
+    df <- df %>%
+      mutate(across(any_of(c("AMBI","H","S")),
+                           as.numeric))
+    return(list(AMBI=df))
+  })
+
+  ambi_res_mambi <- reactive({
+    req(input$radioAMBI)
+
+    if(input$radioAMBI=="2"){
+      return(ambi_res_file())
+    }else{
+      return(ambi_res())
+    }
+  })
+
+
+
+  # -------------- ambi_selected() ------------------------
 
 
   ambi_selected <- reactive(getReactableState("tblAMBI", "selected"))
+
+
+  # -------------- output$tblAMBIrep() ------------------------
 
   output$tblAMBIrep <- renderReactable({
 
@@ -1380,6 +2232,16 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       sel <- ""
     }
 
+    if("MAMBIgrp" %in% names(df)){
+      show_mambi_grp <- TRUE
+    }else{
+      show_mambi_grp <- FALSE
+      df <- df %>%
+        mutate(MAMBIgrp="x")
+    }
+    df <- df %>%
+      relocate(MAMBIgrp)
+
 
     if("Replicate" %in% names(df)){
       show_rep <- TRUE
@@ -1397,11 +2259,17 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
               sortable = F,
               #selection = "none",
               onClick = "select",
-              style = list(fontSize = "0.8rem"),
+              style = list(fontSize = table_font),
               columns = list(
-                Station = colDef(show=show_stn, minWidth = 100,
+                Station = colDef(show=show_stn, minWidth = 70,
                                  filterable = stn_filter,
                                  sortable = TRUE),
+                MAMBIgrp = colDef(html = TRUE,
+                                  header= JS('function() {
+        return `<div>Type</div><div>M-AMBI</div>`
+      }'),
+                                  show=show_mambi_grp, minWidth = 70,
+                                  sortable = TRUE, filterable = TRUE),
                 Replicate = colDef(show=show_rep, minWidth = 70,
                                  filterable = TRUE,
                                  sortable = TRUE),
@@ -1456,6 +2324,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     )
   }
 
+  # -------------- output$warnAMBI ------------------------
 
   output$warnAMBI <- renderUI({
 
@@ -1480,6 +2349,8 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   })
 
+  # -------------- output$tblAMBI ------------------------
+
   output$tblAMBI <- renderReactable({
     req(ambi_res())
 
@@ -1499,6 +2370,15 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       df <- df %>%
         mutate(Station="x")
     }
+    if("MAMBIgrp" %in% names(df)){
+      show_mambi_grp <- TRUE
+    }else{
+      show_mambi_grp <- FALSE
+      df <- df %>%
+        mutate(MAMBIgrp="x")
+    }
+    df <- df %>%
+      relocate(MAMBIgrp)
 
     if(nrow(df)==1){
       selection_type <- NULL
@@ -1506,28 +2386,44 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       selection_type <- "single"
     }
 
+    df <- df %>%
+      mutate(Disturbance=short_version(Disturbance))
+
     reactable(df,
               sortable=F,
               showSortable=T,
               selection = selection_type,
               onClick = "select",
-              style = list(fontSize = "0.8rem"),
+              style = list(fontSize = "0.70rem"),
               columns = list(
-                Station = colDef(show=show_stn, minWidth = 100, sortable = TRUE, filterable = TRUE),
+                MAMBIgrp = colDef(html = TRUE,
+                header= JS('function() {
+        return `<div>Type</div><div>M-AMBI</div>`
+      }'),
+                show=show_mambi_grp, minWidth = 70,
+                               sortable = TRUE, filterable = TRUE),
+                Station = colDef(show=show_stn, minWidth = 70,
+                                 sortable = TRUE, filterable = TRUE),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
                 N = colDef(minWidth = 50),
                 S = colDef(minWidth = 40),
-                H = colDef(format=colFormat(digits = 3), minWidth = 50),
+                H = colDef(name="H'",
+                  format=colFormat(digits = 3), minWidth = 50),
                 fNA = colDef(name="%NA", format=pct_format, minWidth = pct_minwidth),
                  I = colDef(format=pct_format, minWidth = pct_minwidth),
                  II = colDef(format=pct_format, minWidth = pct_minwidth),
                  III = colDef(format=pct_format, minWidth = pct_minwidth),
                  IV = colDef(format=pct_format, minWidth = pct_minwidth),
-                 V = colDef(format=pct_format, minWidth = pct_minwidth)
+                 V = colDef(format=pct_format, minWidth = pct_minwidth),
+                Disturbance=colDef(
+                  name = "Disturbance",
+                  minWidth = 90)
+
               ), # columns
-              defaultColDef = colDef(minWidth = 70, show=T, vAlign = "bottom"),
+              defaultColDef = colDef(minWidth = 70, show=T,
+                                     vAlign = "bottom"),
               compact = TRUE,
-              wrap = FALSE,
+              wrap = TRUE, # FALSE,
               fullWidth = F,
               resizable = F,
               bordered = TRUE,
@@ -1542,6 +2438,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 }
   })
 
+  # -------------- observeEvent(input$start_calculation) ------------------------
 
   observeEvent(input$start_calculation,{
     vals$clicked <- TRUE
@@ -1572,6 +2469,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   })
 
 
+  # -------------- output$btnCalculate ------------------------
 
 
   output$btnCalculate <- renderUI({
@@ -1603,6 +2501,75 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     }
   })
 
+  # -------------- output$btnCalcMAMBI ------------------------
+
+  output$btnCalcMAMBI <- renderUI({
+    req(ambi_first())
+    #res_ambi <- ambi_res()[["AMBI"]]
+    if(is.null(vals$first_click)){
+      icon_name <- "play"
+      lab <- "Calculate"
+    }else{
+      icon_name <- "redo"
+      lab <- "Update"
+    }
+    is_clicked <- vals$clicked
+    is_clicked <- ifelse(is.null(is_clicked), F, is_clicked)
+    if(is_clicked==T){
+      res <- tagList(disabled(
+        actionButton(
+          "start_mambi",
+          label=lab,
+          icon=icon(icon_name)
+        )))
+    }else{
+      res <- tagList(
+        actionButton(
+          "start_mambi",
+          label=lab,
+          icon=icon(icon_name)
+        ))
+    }
+  })
+
+  # -------------- output$btnDownloadInds2 ------------------------
+
+  output$btnDownloadInds2 <- downloadHandler(
+
+    filename = function() {
+      paste0("download ",
+             format.Date(Sys.time(),
+                         "%Y%m%d_%H%M%S"),
+             ".xlsx")
+    },
+    content = function(file) {
+
+      res <- isolate(ambi_res())
+      res2 <- tryCatch({
+        isolate(mambi_res())
+      },warning = function(w){
+        message('Warning isolating mambi_res()!')
+        print(w)
+      },error = function(e){
+        message('Error isolating mambi_res()!')
+        print(e)
+        return(NULL)
+      })
+
+
+      progress <- Progress$new(session, min=1, max=10)
+      on.exit(progress$close())
+
+      progress$set(message = 'Preparing download',
+                   detail = "please wait...")
+
+      wb <- excel_results(res, res2)
+
+      saveWorkbook(wb, file = file, overwrite = TRUE)
+    }
+  )
+
+  # -------------- output$btnDownloadInds ------------------------
 
 
   output$btnDownloadInds <- downloadHandler(
@@ -1616,7 +2583,17 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     content = function(file) {
 
       res <- isolate(ambi_res())
-      res2 <- isolate(mambi_res())
+      res2 <- tryCatch({
+        isolate(mambi_res())
+      },warning = function(w){
+        message('Warning isolating mambi_res()!')
+        print(w)
+      },error = function(e){
+        message('Error isolating mambi_res()!')
+        print(e)
+        return(NULL)
+      })
+
 
         progress <- Progress$new(session, min=1, max=10)
         on.exit(progress$close())
