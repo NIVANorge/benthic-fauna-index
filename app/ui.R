@@ -11,15 +11,40 @@ page_navbar(
   id = "page",
   #theme = bs_theme(font_scale = 0.8), #"0.7rem"
   tags$style(type='text/css', "
+  body{font-size: 0.8rem;}
+  .accordion-title {
+  font-size: 0.8rem;
+  }
+  .accordion-button {
+  padding: 0.6rem 0.5rem 0.6rem 0.5rem;
+  }
+  .accordion-body {
+  padding: 0rem 1.2rem 0.2rem 1.2rem;
+  }
+
   .form-control {font-size: 0.8rem;}
   button { font-size: 0.8rem; }
   .btn { font-size: 0.8rem; }
+  .btn-file {
+  padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+  }
+    .form-control {
+  padding: 0.2rem 0.5rem 0.2rem 0.5rem;
+  }
+
    label { font-size: 0.8rem; }
-   label.control-label {
+   .control-label {
    font-size: 0.8rem;
-   padding: 0px 6px 0px 6px;}
-   .selectize-input { font-size: 0.8rem;}
-   .selectize-dropdown {font-size: 0.8rem;}
+     margin: 0rem 0rem 0rem 0rem;
+     padding: 0rem 0.5rem 0rem 0.5rem;}
+   .selectize-input {
+   padding: 0.3rem 0.3rem 0.3rem 0.3rem;
+   font-size: 0.8rem;
+   }
+   .selectize-dropdown {
+   //padding: 0.5rem 0.5rem 0.5rem 0.5rem;
+   font-size: 0.8rem;
+   }
    " ),
 
   nav_panel(title="Observations",
