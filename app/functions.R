@@ -1,4 +1,100 @@
 
+short_version <- function(s){
+  s <- ifelse(s=="Slightly disturbed", "Slight", s)
+  s <- ifelse(s=="Moderately disturbed", "Moderate", s)
+  s <- ifelse(s=="Heavily disturbed", "Heavy", s)
+  return(s)
+}
+
+
+# gof_stats %>%
+#   map(~ .x %>% pluck("cvm"))
+mambi_single <- function(df,
+                         by_var,
+                         bounds_mambi,
+                         refconds){
+  # df <- list_mambi[["df"]]
+  # by_var <- list_mambi[["by_var"]]
+  # bounds_mambi <- list_mambi[["bounds_mambi"]]
+  # refconds <- list_mambi[["refconds"]]
+  refcond_H <- refconds$refcond_H[1]
+  refcond_S <- refconds$refcond_S[1]
+
+  mambi <- tryCatch({
+    ambiR::MAMBI(df, by=by_var, bounds = bounds_mambi,
+                 limits_H = c("bad"=0, "high"=refcond_H),
+                 limits_S = c("bad"=0, "high"=refcond_S))
+  },warning = function(w){
+    message('Warning from MAMBI()!')
+    print(w)
+  },error = function(e){
+    message('Error in MAMBI()!')
+    print(e)
+    return(NULL)
+  })
+
+  if(is.null(mambi)){
+    return(data.frame())
+  }else{
+    mambi <- sort_results(mambi)
+
+    bounds<- data.frame(HG=bounds_mambi["HG"],
+                        GM=bounds_mambi["GM"],
+                        MP=bounds_mambi["MP"],
+                        PB=bounds_mambi["PB"])
+    mambi <- mambi %>%
+      merge(bounds, all=T)
+
+    return(mambi)
+  }
+
+}
+
+
+batch_mambi <- function(df, by_var, bounds, refconds){
+
+  # need to include limits for H, S and AMBI
+
+  # bounds_mambi
+  # data.frame(PB = 0.2, MP = 0.39, GM = 0.53, HG = 0.77)
+
+  if("MAMBIgrp" %in% names(df)){
+
+    list_df <- df %>%
+      split(.$MAMBIgrp)
+
+    if("MAMBIgrp" %in% names(refconds)){
+      list_refconds  <- refconds %>%
+        split(.$MAMBIgrp)
+
+      res <- purrr::map2(list_df,
+                       list_refconds,
+                       mambi_single,
+                       by_var=by_var,
+                       bounds_mambi=bounds
+      )
+    }else{
+      res <- purrr::map(list_df,
+                        mambi_single,
+                         by_var=by_var,
+                         bounds_mambi=bounds,
+                        refconds=refconds
+      )
+      }
+    res <- res %>%
+      bind_rows(.id="MAMBIgrp")
+
+  }else{
+    res <- mambi_single(df=df, by_var=by_var,
+                        bounds_mambi=bounds,
+                        refconds=refconds)
+  }
+
+  return(res)
+
+}
+
+
 ambi_calculation <- function(df, df_changes=NULL){
 
   if(!"Species" %in% names(df)){
@@ -15,7 +111,9 @@ ambi_calculation <- function(df, df_changes=NULL){
   }else{
     var_by <- NULL
   }
-
+  if("MAMBIgrp" %in% names(df)){
+    var_by <- c(var_by, "MAMBIgrp")
+  }
 
   # saveRDS(df, file="../notes/breaks_ambi.Rds")
 
@@ -114,7 +212,18 @@ sort_results <- function(df){
                            ordered = T)) %>%
       arrange(ord1) %>%
       select(-ord1)
-  }}
+    }}
+
+  if("MAMBIgrp" %in% names(df)){
+    df <- df %>%
+      mutate(ord1 = factor(MAMBIgrp,
+                           levels = str_sort(unique(MAMBIgrp),
+                                             numeric = T),
+                           ordered = T)) %>%
+      arrange(ord1) %>%
+      select(-ord1)
+  }
+
   return(df)
 }
 
@@ -153,7 +262,7 @@ get_number_single <- function(s){
 }
 
 
-reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
+reform_data <- function(df, form, idStn, idRep, idSpec, idCount, idGrp,
                         label_long, label_wide_species, label_wide_station,
                         has_header, progress=NULL){
   split_n <- 10
@@ -172,15 +281,18 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
     if(is.null(idCount)){
       return(NULL)
     }
+
     cols <- c(idStn,
               idRep,
               idSpec,
-              idCount)
+              idCount,
+              idGrp)
 
     colnames <- c("Station",
                   "Replicate",
                   "Species",
-                  "Count")
+                  "Count",
+                  "MAMBIgrp")
 
     colnames <- colnames[cols!="none"]
     cols <- cols[cols!="none"]
@@ -491,7 +603,7 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount,
   }
 
   df <- df %>%
-    select(any_of(c("Station","Replicate","Species","Count")))
+    select(any_of(c("MAMBIgrp","Station","Replicate","Species","Count")))
 
   return(list("df"=df, "dropped"=dropped, "msg"=msg))
 
@@ -727,6 +839,7 @@ eqr_for_table <- function(dfEQR, dfstn){
 
 excel_results <- function(ambi_res, mambi_res=NULL){
 
+
   wb <- createWorkbook()
 
   hs1 <- createStyle(textDecoration = "Bold")
@@ -743,6 +856,8 @@ excel_results <- function(ambi_res, mambi_res=NULL){
 
   df <- ambi_res$AMBI
   nr <- 1 +nrow(df)
+
+  names(df)[names(df)=="MAMBIgrp"] <- "Type M-AMBI"
 
   writeData(wb, id, df, headerStyle = hs1)
 
@@ -775,6 +890,8 @@ excel_results <- function(ambi_res, mambi_res=NULL){
 
 
   df <- ambi_res$AMBI_rep
+
+  names(df)[names(df)=="MAMBIgrp"] <- "Type M-AMBI"
 
   if(!is.null(df)){
     id <- "AMBI Replicates"
@@ -816,6 +933,7 @@ excel_results <- function(ambi_res, mambi_res=NULL){
     names(df)[names(df)=="group"] <- "Group"
     names(df)[names(df)=="group"] <- "Group"
     names(df)[names(df)=="group_note"] <- "Group Note"
+    names(df)[names(df)=="MAMBIgrp"] <- "Type M-AMBI"
 
     id <- "matched"
     addWorksheet(wb, id)
@@ -827,6 +945,7 @@ excel_results <- function(ambi_res, mambi_res=NULL){
   df <- ambi_res$warnings
 
   if(!is.null(df)){
+    names(df)[names(df)=="MAMBIgrp"] <- "Type M-AMBI"
     id <- "warnings"
     addWorksheet(wb, id)
     writeData(wb, id, df, headerStyle = hs1)
@@ -834,10 +953,12 @@ excel_results <- function(ambi_res, mambi_res=NULL){
 
   }
 
-  df <- mambi_res$MAMBI
+  df <- mambi_res
+  #df <- mambi_res$MAMBI
   if(!is.null(df)){
 
     names(df)[names(df)=="MAMBI"] <- "M-AMBI"
+    names(df)[names(df)=="MAMBIgrp"] <- "Type M-AMBI"
 
     id <- "M-AMBI"
     addWorksheet(wb, id)
@@ -846,7 +967,7 @@ excel_results <- function(ambi_res, mambi_res=NULL){
 
     icol <- which(tolower(names(df))==tolower("M-AMBI"))
 
-    df2 <- mambi_res$bounds
+    df2 <- NULL #mambi_res$bounds
     if(!is.null(df2)){
       names(df2)[names(df2)=="MAMBI"] <- "M-AMBI"
       writeData(wb, id, df2, headerStyle = hs1,
@@ -864,12 +985,19 @@ excel_results <- function(ambi_res, mambi_res=NULL){
     i <- which(tolower(names(df))==tolower("S"))
     openxlsx::setColWidths(wb, id, cols = i, widths = 5)
 
-    colnames <- c("AMBI", "M-AMBI","H","EQR","x","y","z")
+    colnames <- c("AMBI", "M-AMBI","H")
     for(icol in colnames){
       i <- which(tolower(names(df))==tolower(icol))
       openxlsx::addStyle(wb, id, style_nr3, cols = i, rows=(2:nr))
       openxlsx::setColWidths(wb, id, cols = i, widths = 8)
     }
+    colnames <- c("EQR","x","y","z","HG","GM","MP","PB")
+    for(icol in colnames){
+      i <- which(tolower(names(df))==tolower(icol))
+      openxlsx::addStyle(wb, id, style_nr3, cols = i, rows=(2:nr))
+      openxlsx::setColWidths(wb, id, cols = i, widths = 7)
+    }
+
   }
 
   # -----------------------------------------
