@@ -12,6 +12,7 @@ library(openxlsx)
 library(ambiR)
 library(stringr)
 library(shinyjs)
+library(ggplot2)
 
 source("functions.R")
 
@@ -267,15 +268,19 @@ function(input, output, session) {
 
   output$checkHeader <- renderUI({
     req(input$selectForm)
-    req(sheet_rows())
-    req(sheet_columns())
-
+    #req(sheet_rows())
+    #req(sheet_columns())
+    # if(is.null(vals$header_check)){
+    #   chk_val <- TRUE
+    # }else{
+    #   chk_val <- vals$header_check
+    # }
 
     if(input$selectForm==label_long){
     tagList(checkboxInput(
       "hasHeader",
       "has column names",
-      TRUE
+      value = TRUE
     ))}else{
       # tagList(checkboxInput(
       #   "hasHeader",
@@ -638,6 +643,10 @@ function(input, output, session) {
     }
   })
 
+
+
+
+
   # --------------  sheet_columns() ------------------------
 
   sheet_columns <- reactive({
@@ -751,13 +760,17 @@ function(input, output, session) {
     }
   })
 
+
+
   # --------------  obs_data() ------------------------
 
   obs_data <- reactive({
+
     req(input$selectedSheet)
     req(obs_data_raw())
     req(input$selectForm)
     req(input$colrowSpec)
+    #req(check_header())
 
     df <- obs_data_raw()
 
@@ -769,10 +782,8 @@ function(input, output, session) {
     idGrp <- input$colrowGroup
 
     idGrp <- ifelse(is.null(idGrp),"none",idGrp)
-
-    if(input$selectForm==label_long){
-      has_header <- input$hasHeader
-    }else{
+    has_header <- input$hasHeader
+    if(input$selectForm!=label_long){
       has_header <- F
     }
 
@@ -2132,7 +2143,15 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       df_changes <- vals$df_changes
       df <- obs_data()$df
 
-      res <- ambi_calculation(df, df_changes)
+
+      progress <- Progress$new(session, min=1, max=10)
+      on.exit(progress$close())
+
+      progress$set(message = 'Calculating AMBI index',
+                   detail = "shouldn't take long...")
+
+
+      res <- ambi_calculation(df, df_changes, progress)
       return(res)
     }else{
       return(list(AMBI=NULL))
@@ -2363,6 +2382,115 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   })
 
+  # -------------- output$plotAMBI ------------------------
+
+   output$plotAMBI <- renderPlot({
+
+     req(ambi_res())
+
+
+     # "Undisturbed", "Slightly disturbed", "Moderately disturbed", "Heavily disturbed")
+     ambi_bounds <- c(1.2, 3.3, 5.0)
+
+
+     res <- ambi_res()
+
+     df <- res$AMBI
+     df_rep <- res$AMBI_rep
+
+     if(!is.null(df)){
+       if(nrow(df)>0){
+         df_text <- data.frame(y = c(0.6, 2.25, 4.4, 5.5),
+                      status=c("Undisturbed", "Slightly disturbed",
+                              "Moderately disturbed", "Heavily disturbed"))
+
+     if("Station" %in% names(df)){
+       lab_stn <- element_text()
+     }else{
+       lab_stn <- element_blank()
+       df <- df %>%
+         mutate(Station=" ")
+       if("AMBI_SD" %in% names(df)){
+       df_rep <- df_rep %>%
+         mutate(Station=" ")
+       }
+     }
+
+
+     if("MAMBIgrp" %in% names(df)){
+       show_mambi_grp <- TRUE
+     }else{
+       show_mambi_grp <- FALSE
+       df <- df %>%
+         mutate(MAMBIgrp="x")
+       if("AMBI_SD" %in% names(df)){
+         df_rep <- df_rep %>%
+           mutate(MAMBIgrp="x")
+         df_rep <- df_rep %>%
+           relocate(MAMBIgrp)
+       }
+     }
+     df <- df %>%
+       relocate(MAMBIgrp)
+
+     df_text <- df %>%
+       distinct(MAMBIgrp,Station) %>%
+       group_by(MAMBIgrp) %>%
+       slice(1) %>%
+       ungroup() %>%
+       merge(df_text, all=T)
+
+     #if(!is.null(df_rep)){
+     if("AMBI_SD" %in% names(df)){
+       show_err <- T
+       df <- df %>%
+         mutate(ymin = AMBI-AMBI_SD, ymax=AMBI+AMBI_SD)
+
+     }else{
+       show_err <- F
+     }
+
+     p <- ggplot(df,aes(x=Station,y=AMBI)) +
+       geom_hline(yintercept=ambi_bounds,
+                  linetype=1, linewidth=0.5, alpha=0.1,
+                  colour = "black") +
+       geom_text(data=df_text, aes(x=Station, y=y, label=status),
+                 hjust=0, colour="lightgrey", nudge_x = -0.55)
+
+     if(show_err==T){
+         p <- p +
+           geom_linerange(aes(x=Station, ymin=ymin, ymax=ymax),
+                          alpha=0.5)
+         p <- p +
+           geom_jitter(data=df_rep,
+                       aes(x=Station, y=AMBI), size=1,
+                         width = 0.1, height=0, alpha=0.5)
+
+       }
+     p <- p+
+       geom_point(colour='red') +
+       theme_linedraw(base_size = 12) +
+       theme(panel.grid.major.x = element_blank(),
+             panel.grid.minor.x = element_blank(),
+             panel.grid.major.y =  element_blank(),
+             panel.grid.minor.y = element_blank(),
+             strip.background = element_blank(),
+             strip.text = element_text(colour="black"),
+             axis.title.x = lab_stn) +
+       scale_y_continuous(limits = c(0,6), breaks=seq(0,6,1), expand = c(0,0))
+     if(show_mambi_grp==T){
+        p <- p +
+          facet_wrap(.~MAMBIgrp, ncol=4)
+     }
+
+
+     p
+
+     }
+   }},
+     height = 200, width = 600)
+
+
   # -------------- output$tblAMBI ------------------------
 
   output$tblAMBI <- renderReactable({
@@ -2455,12 +2583,42 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   # -------------- observeEvent(input$start_calculation) ------------------------
 
   observeEvent(input$start_calculation,{
+
+    if(is.null(vals$first_click)){
+
+      accordion_panel_insert(
+        id="acc_ambi",
+        accordion_panel(
+          value = "panel_ambi_fig",
+          title = "AMBI Figures",
+          icon = bsicons::bs_icon("file-earmark-spreadsheet"),
+          plotOutput("plotAMBI")
+        ),
+        target = "panel_ambi",
+        position = "after"
+      )
+
+    }
+
+
     vals$clicked <- TRUE
     vals$first_click <- TRUE
     accordion_panel_remove(
       id="acc_ambi",
       "AMBI Replicates"
     )
+    accordion_panel_remove(
+      id="acc_ambi",
+      "panel_ambi_rep"
+    )
+    # accordion_panel_remove(
+    #   id="acc_ambi",
+    #   "AMBI Figures"
+    # )
+    # accordion_panel_remove(
+    #   id="acc_ambi",
+    #   "panel_ambi_fig"
+    # )
 
     df <- isolate(ambi_res()[["AMBI_rep"]])
 
@@ -2469,7 +2627,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       accordion_panel_insert(
         id="acc_ambi",
         accordion_panel(
-          #value = "panel_ambi_rep",
+          value = "panel_ambi_rep",
           title = "AMBI Replicates",
           icon = bsicons::bs_icon("file-earmark-spreadsheet"),
           reactableOutput("tblAMBIrep")

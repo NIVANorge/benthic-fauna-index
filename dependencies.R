@@ -19,6 +19,7 @@ packages <- c(
   'remotes',
   'stringr',
   'shinyjs',
+  'ggplot2',
   '')
 options(Ncpus = -1)
 for (pkg in packages) {
