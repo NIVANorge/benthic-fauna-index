@@ -95,7 +95,7 @@ batch_mambi <- function(df, by_var, bounds, refconds){
 }
 
 
-ambi_calculation <- function(df, df_changes=NULL){
+ambi_calculation <- function(df, df_changes=NULL, progress=NULL){
 
   if(!"Species" %in% names(df)){
     return(NULL)
@@ -117,6 +117,10 @@ ambi_calculation <- function(df, df_changes=NULL){
 
   # saveRDS(df, file="../notes/breaks_ambi.Rds")
 
+  if(!is.null(progress)){
+    progress$set(value = 2)
+  }
+
   res <- tryCatch({ambiR::AMBI(df,
                                var_rep = var_rep,
                                var_species="Species",
@@ -131,6 +135,10 @@ ambi_calculation <- function(df, df_changes=NULL){
     print(e)
     return(NULL)
   })
+
+  if(!is.null(progress)){
+    progress$set(value = 8)
+  }
 
   df_res <- res$AMBI
   if(is.null(df_res)){
@@ -265,6 +273,8 @@ get_number_single <- function(s){
 reform_data <- function(df, form, idStn, idRep, idSpec, idCount, idGrp,
                         label_long, label_wide_species, label_wide_station,
                         has_header, progress=NULL){
+
+  #browser()
   split_n <- 10
   ip <- 1
   if(!is.null(progress)){
@@ -311,11 +321,12 @@ reform_data <- function(df, form, idStn, idRep, idSpec, idCount, idGrp,
           cols[i] <- colnames[i]
         }
       }
-      for(coli in cols)
-      if(!coli %in% names(df)){
-        return(NULL)
+      for(coli in colnames){
+        if(!coli %in% names(df)){
+          return(NULL)
+        }
       }
-      df <- df[,cols]
+      df <- df[,colnames]
       df <- df %>%
         mutate(Count=get_number(Count)) %>%
         filter(!is.na(Count))
