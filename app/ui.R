@@ -166,7 +166,7 @@ page_navbar(
                           title = "M-AMBI Reference Conditions",
             icon = bsicons::bs_icon("file-earmark-spreadsheet"),
 
-            layout_columns(col_widths = c(4,4),
+            layout_columns(col_widths = c(5,4),
                              uiOutput("txtRefcon"),
                              reactableOutput("tblRefCond", inline = T)
                         )

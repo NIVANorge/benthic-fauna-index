@@ -1479,6 +1479,8 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
   refconds_mambi <- reactive({
     req(ambi_res_mambi())
 
+    df_bnds <- bounds_mambi()
+
     df <- ambi_res_mambi()$AMBI
     if(is.null(df)){
       return(NULL)
@@ -1514,6 +1516,9 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
              modified_H = 0,
              modified_S = 0)
 
+    df <- df %>%
+      merge(df_bnds, all=T)
+
     # browser()
     if(!is.null(vals$changes_refcond)){
       df_changes <- vals$changes_refcond
@@ -1523,14 +1528,18 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
             left_join(df_changes, by="MAMBIgrp")
         }else{
           df <- df %>%
-            mutate(H_new=NA, S_new=NA)
+            mutate(H_new=NA, S_new=NA,
+                   PB_new=NA, MP_new=NA,
+                   GM_new=NA, HG_new=NA)
         }
       }else{
         if("MAMBIgrp" %in% names(df_changes)){
           df_changes <- df_changes %>%
             filter(is.na(MAMBIgrp))
           if(nrow(df_changes)==0){
-            df_changes <- data.frame(H_new=NA, S_new=NA)
+            df_changes <- data.frame(H_new=NA, S_new=NA,
+                                     PB_new=NA, MP_new=NA,
+                                     GM_new=NA, HG_new=NA)
           }
           }
           df <- df %>%
@@ -1539,8 +1548,16 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       df <- df %>%
         mutate(refcond_H = ifelse(is.na(H_new), refcond_H, H_new),
                refcond_S = ifelse(is.na(S_new), refcond_S, S_new),
+               PB = ifelse(is.na(PB_new), PB, PB_new),
+               MP = ifelse(is.na(MP_new), MP, MP_new),
+               GM = ifelse(is.na(GM_new), GM, GM_new),
+               HG = ifelse(is.na(HG_new), HG, HG_new),
                modified_H = ifelse(is.na(H_new), 0, 1),
-               modified_S = ifelse(is.na(S_new), 0 ,1))
+               modified_S = ifelse(is.na(S_new), 0 ,1),
+               modified_PB = ifelse(is.na(PB_new), 0, 1),
+               modified_MP = ifelse(is.na(MP_new), 0 ,1),
+               modified_GM = ifelse(is.na(GM_new), 0 ,1),
+               modified_HG = ifelse(is.na(HG_new), 0 ,1))
 
     }
 
@@ -1594,7 +1611,8 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
           tagList(p("Default values for reference conditions for Shannon Wiener diversity index (H')
                      and Species richness (S) are obtained from the maximum values calculated from
                      observation data."),
-            p("Click on a value to modify it and specify a new reference condition."))
+            p("Click on a value to modify it and specify a new reference condition."),
+            p("Default values for the thresholds between status classes can also be modified here."))
 
     }
   })
@@ -1652,9 +1670,69 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
                  refcond_S = colDef(name="S",
                                     show=T,
                                     minWidth = 50,
-                            format=colFormat(digits = 0),
-                            style=JS("function(rowInfo) {
+                                    format=colFormat(digits = 0),
+                                    style=JS("function(rowInfo) {
                       if(rowInfo.values['refcond_S'] != rowInfo.values['S_max']){
+                        return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
+                      }else{
+                          return
+                        }
+                      }")),
+                 PB = colDef(name="PB",
+                             html = TRUE,
+                             header=JS('function() {
+        return `<div>Poor/</div><div>Bad</div>`
+      }'),
+                                    show=T,
+                                    minWidth = 50,
+                                    format=colFormat(digits = 3),
+                                    style=JS("function(rowInfo) {
+                      if(rowInfo.values['modified_PB'] == 1){
+                        return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
+                      }else{
+                          return
+                        }
+                      }")),
+                 MP = colDef(name="MP",
+                             html = TRUE,
+                             header=JS('function() {
+        return `<div>Mod/</div><div>Poor</div>`
+      }'),
+                             show=T,
+                             minWidth = 50,
+                             format=colFormat(digits = 3),
+                             style=JS("function(rowInfo) {
+                      if(rowInfo.values['modified_MP'] == 1){
+                        return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
+                      }else{
+                          return
+                        }
+                      }")),
+                 GM = colDef(name="GM",
+                             html = TRUE,
+                             header=JS('function() {
+        return `<div>Good/</div><div>Mod</div>`
+      }'),
+                             show=T,
+                             minWidth = 50,
+                             format=colFormat(digits = 3),
+                             style=JS("function(rowInfo) {
+                      if(rowInfo.values['modified_GM'] == 1){
+                        return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
+                      }else{
+                          return
+                        }
+                      }")),
+                 HG = colDef(name="HG",
+                             html = TRUE,
+                             header=JS('function() {
+        return `<div>High/</div><div>Good</div>`
+      }'),
+                             show=T,
+                             minWidth = 50,
+                             format=colFormat(digits = 3),
+                             style=JS("function(rowInfo) {
+                      if(rowInfo.values['modified_HG'] == 1){
                         return { backgroundColor:'rgba(0, 255, 0, 0.05)'}
                       }else{
                           return
@@ -1680,7 +1758,8 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
                  )
 
                ), # columns
-               defaultColDef = colDef(minWidth = 70, show=F, vAlign = "bottom"),
+               defaultColDef = colDef(minWidth = 70,
+                                      show=F, vAlign = "bottom"),
                compact = TRUE,
                wrap = FALSE,
                fullWidth = F,
@@ -1711,9 +1790,17 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
       if (window.Shiny) {
         if(column.id == 'refcond_H'){
-            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'refcond_H', val: rowInfo.values['refcond_H'] }, { priority: 'event' })
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'refcond_H', val: rowInfo.values['refcond_H'], minval: 0, maxval:9999 }, { priority: 'event'})
         }else if(column.id == 'refcond_S'){
-            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'refcond_S', val: rowInfo.values['refcond_S'] }, { priority: 'event' })
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'refcond_S', val: rowInfo.values['refcond_S'], minval: 0, maxval:9999  }, { priority: 'event'})
+        }else if(column.id == 'PB'){
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'PB', val: rowInfo.values['PB'], minval: 0, maxval: rowInfo.values['MP'] }, { priority: 'event' })
+        }else if(column.id == 'MP'){
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'MP', val: rowInfo.values['MP'], minval: rowInfo.values['PB'], maxval: rowInfo.values['GM']}, { priority: 'event' })
+        }else if(column.id == 'GM'){
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'GM', val: rowInfo.values['GM'], minval: rowInfo.values['MP'], maxval: rowInfo.values['HG']}, { priority: 'event' })
+        }else if(column.id == 'HG'){
+            Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'HG', val: rowInfo.values['HG'], minval: rowInfo.values['GM'], maxval: 1}, { priority: 'event' })
         }else{
              Shiny.setInputValue('edit_refcond',{ index: rowInfo.index + 1,metric: 'reset', val: 0 }, { priority: 'event' })
             }
@@ -1739,7 +1826,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
     metric <- ix[2]
     val <- ix[3] %>% as.numeric()
 
-    val <- ifelse(metric=="refcond_H", format(val, digits=4), val)
+    val <- ifelse(metric=="refcond_S", val, format(val, digits=4))
 
     ix <- ix[1] %>% as.numeric()
 
@@ -1775,24 +1862,43 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
         df_changes[ix,"S_new"] <- NA
         df_changes[ix,"H_new"] <- NA
+        df_changes[ix,"PB_new"] <- NA
+        df_changes[ix,"MP_new"] <- NA
+        df_changes[ix,"GM_new"] <- NA
+        df_changes[ix,"HG_new"] <- NA
       }
 
       vals$changes_refcond <- df_changes
 
     }else{
-      title <- ifelse(metric=="refcond_H","H'- Shannon Wiener diversity index","")
-      title <- ifelse(metric=="refcond_S","S - Species richness",title)
-      title <- paste0(title, name_grp)
+      title <- refcon_title(metric)
       metric <- paste0("new", metric)
-      showModal(change_refcond(metric=metric, value=val, title=title))
+      showModal(change_refcond(metric=metric, value="",
+                               title=title,
+                               placeholder = val))
 
     }
 
   })
 
+
+  refcon_title <- function(metric, name_grp=NA_character_){
+
+    title <- ifelse(metric=="refcond_H","H'- Shannon Wiener diversity index","")
+    title <- ifelse(metric=="refcond_S","S - Species richness",title)
+    title <- ifelse(metric=="PB","M-AMBI Poor/Bad Threshold",title)
+    title <- ifelse(metric=="MP","M-AMBI Moderate/Poor Threshold",title)
+    title <- ifelse(metric=="GM","M-AMBI Good/Moderate Threshold",title)
+    title <- ifelse(metric=="HG","M-AMBI High/Good Threshold",title)
+    #title <- paste0(title, name_grp)
+    return(title)
+  }
+
   # -------------- change_refcond() ------------------------
 
-  change_refcond <- function(metric, value, title) {
+  change_refcond <- function(metric, value="", title,
+                             placeholder = NULL,
+                             warning=NULL) {
 
     modalDialog(
       size = "s",
@@ -1802,11 +1908,12 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         tagList(textInput(
           inputId = metric,
           label=  NULL,
-          value = "",
+          value = value,
           width= "100px",
-          placeholder = value
+          placeholder = placeholder
         ))
       ),
+      tags$p(style="color:red", warning),
       footer = tagList(
         actionButton("changeRefCond", "Apply"),
         modalButton("Cancel")
@@ -1820,44 +1927,155 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
   observeEvent(input$changeRefCond, {
     # browser()
-    removeModal()
+
 
     new_s <- input$newrefcond_S
     new_h <- input$newrefcond_H
+    new_pb <- input$newPB
+    new_mp <- input$newMP
+    new_gm <- input$newGM
+    new_hg <- input$newHG
 
     ix <- input$edit_refcond %>% unlist()
-    metric <- ix[2]
+    metric_in <- ix[2]
+    preval <-  ix[3] %>% as.numeric()
+    minval <-  ix[4] %>% as.numeric()
+    maxval <-  ix[5] %>% as.numeric()
     ix <- ix[1] %>% as.numeric()
+    df_changes <- vals$changes_refcond
+    df_refcon <- isolate(refconds_mambi())
 
     bChanged <- F
+    bOK <- T
+    warning <- NULL
 
     pattern <- "([[:digit:]]*\\.*[[:digit:]]*)"
 
-    if(metric=="refcond_H"){
+    if(metric_in=="refcond_H"){
       if(!is.null(new_h)){
       if(new_h!=""){
         bChanged <- T
         value <- regmatches(new_h,regexpr(pattern,new_h))
         value <- ifelse(value=="",NA, as.numeric(value))
         metric <- "H_new"
+        if(value<=minval){
+          bOK <- F
+          warning <- paste0("Reference condition H' must be > ",
+                            minval)
+        }
         }
       }
     }
-    if(metric=="refcond_S"){
+    if(metric_in=="refcond_S"){
       if(!is.null(new_s)){
         if(new_s!=""){
           bChanged <- T
           value <- regmatches(new_s,regexpr(pattern,new_s))
           value <- ifelse(value=="",NA, as.numeric(value))
           metric <- "S_new"
+          if(value<=minval){
+            bOK <- F
+            warning <- paste0("Reference condition S must be > ",
+                              minval)
+          }
         }
       }
     }
+    if(metric_in=="PB"){
+      if(!is.null(new_pb)){
+        if(new_pb!=""){
+          bChanged <- T
+          value <- regmatches(new_pb,regexpr(pattern,new_pb))
+          value <- ifelse(value=="",NA, as.numeric(value))
+          metric <- "PB_new"
+          if(value<=minval){
+            bOK <- F
+            warning <- paste0("Poor/Bad threshold must be > ",
+                              minval)
+          }
+          if(value>=maxval){
+            bOK <- F
+            warning <- paste0("Poor/Bad threshold must be < Moderate/Poor threshold (", maxval, ")")
+          }
+
+        }
+      }
+    }
+    if(metric_in=="MP"){
+      if(!is.null(new_mp)){
+        if(new_mp!=""){
+          bChanged <- T
+          value <- regmatches(new_mp,regexpr(pattern,new_mp))
+          value <- ifelse(value=="",NA, as.numeric(value))
+          metric <- "MP_new"
+          if(value<=minval){
+            bOK <- F
+            warning <- paste0("Moderate/Poor threshold must be > Poor/Bad threshold (",minval,")")
+          }
+          if(value>=maxval){
+            bOK <- F
+            warning <- paste0("Moderate/Poor threshold must be < Good/Moderate threshold (", maxval, ")")
+          }
+
+        }
+      }
+    }
+    if(metric_in=="GM"){
+      if(!is.null(new_gm)){
+        if(new_gm!=""){
+          bChanged <- T
+          value <- regmatches(new_gm,regexpr(pattern,new_gm))
+          value <- ifelse(value=="",NA, as.numeric(value))
+          metric <- "GM_new"
+          if(value<=minval){
+            bOK <- F
+            warning <- paste0("Good/Moderate threshold must be > Moderate/Poor threshold (",minval,")")
+          }
+          if(value>=maxval){
+            bOK <- F
+            warning <- paste0("Good/Moderate threshold must be < High/Good threshold (", maxval, ")")
+          }
+        }
+      }
+    }
+
+    if(metric_in=="HG"){
+      if(!is.null(new_hg)){
+        if(new_hg!=""){
+          bChanged <- T
+          value <- regmatches(new_hg,regexpr(pattern,new_hg))
+          value <- ifelse(value=="",NA, as.numeric(value))
+          metric <- "HG_new"
+          if(value<=minval){
+            bOK <- F
+            warning <- paste0("High/Good threshold must be > Good/Moderate threshold (",minval,")")
+          }
+          if(value>=maxval){
+            bOK <- F
+            warning <- paste0("High/Good threshold must be < ", maxval)
+          }
+
+        }
+      }
+    }
+
+    if(bOK==F){
+
+      removeModal()
+      title <- refcon_title(metric_in)
+      showModal(change_refcond(metric=paste0("new", metric_in),
+                               value=value,
+                               title=title,
+                               placeholder = preval,
+                               warning=warning))
+
+    }else{
+      #  check for consistent threshold values
+      removeModal()
+
     if(bChanged==T){
 
 
-      df_changes <- vals$changes_refcond
-      df_refcon <- isolate(refconds_mambi())
 
 
       if(is.null(df_changes)){
@@ -1865,9 +2083,13 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
         if("MAMBIgrp" %in% names(df_changes)){
           df_changes <- df_changes %>%
             select(MAMBIgrp) %>%
-            mutate(H_new=NA, S_new=NA)
+            mutate(H_new=NA, S_new=NA,
+                   PB_new=NA, MP_new=NA,
+                   GM_new=NA, HG_new=NA)
         }else{
-          df_changes <- data.frame(H_new=NA, S_new=NA)
+          df_changes <- data.frame(H_new=NA, S_new=NA,
+                                   PB_new=NA, MP_new=NA,
+                                   GM_new=NA, HG_new=NA)
         }
       }else{
         if("MAMBIgrp" %in% names(df_changes)){
@@ -1878,7 +2100,9 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
             if(length(ix)==0){
               dfx <- data.frame(MAMBIgrp=NA,
                                H_new=NA,
-                               S_new=NA)
+                               S_new=NA,
+                               PB_new=NA, MP_new=NA,
+                               GM_new=NA, HG_new=NA)
               df_changes <- df_changes %>%
                 bind_rows(dfx)
 
@@ -1896,7 +2120,9 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
             if(length(ix2)==0){
               dfx <- df_refcon %>%
                 distinct(MAMBIgrp) %>%
-                mutate(H_new=NA, S_new=NA)
+                mutate(H_new=NA, S_new=NA,
+                       PB_new=NA, MP_new=NA,
+                       GM_new=NA, HG_new=NA)
               df_changes <- dfx %>%
                 bind_rows(df_changes)
             }else{
@@ -1907,7 +2133,9 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
           if("MAMBIgrp" %in% names(df_refcon)){
             dfx <- df_refcon %>%
               distinct(MAMBIgrp) %>%
-              mutate(H_new=NA, S_new=NA)
+              mutate(H_new=NA, S_new=NA,
+                     PB_new=NA, MP_new=NA,
+                     GM_new=NA, HG_new=NA)
             df_changes <- dfx %>%
               bind_rows(df_changes)
           }else{
@@ -1923,6 +2151,7 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
       df_changes[ix, metric] <- value
 
       vals$changes_refcond <- df_changes
+    }
     }
   })
 
@@ -2547,6 +2776,11 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
                 Station = colDef(show=show_stn, minWidth = 70,
                                  sortable = TRUE, filterable = TRUE),
                 AMBI = colDef(format=colFormat(digits = 3), minWidth = 50),
+                AMBI_SD = colDef(html = TRUE,
+                                 format=colFormat(digits = 3),
+                                 header= JS('function() {
+        return `<div>AMBI</div><div>Std. Dev.</div>`
+      }'), minWidth = 50),
                 N = colDef(minWidth = 50),
                 S = colDef(minWidth = 40),
                 H = colDef(name="H'",
