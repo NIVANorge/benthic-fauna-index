@@ -1628,7 +1628,11 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
 
      df <- df %>%
        mutate(reset=ifelse(refcond_H==H_max, 0, 1))  %>%
-       mutate(reset=ifelse(refcond_S==S_max, reset, 1))
+       mutate(reset=ifelse(refcond_S==S_max, reset, 1)) %>%
+       mutate(reset=ifelse(modified_PB==1, 1, reset)) %>%
+       mutate(reset=ifelse(modified_MP==1, 1, reset)) %>%
+       mutate(reset=ifelse(modified_GM==1, 1, reset)) %>%
+       mutate(reset=ifelse(modified_HG==1, 1, reset))
 
      show_mambi_grp <- FALSE
 
