@@ -1517,7 +1517,11 @@ Shiny.setInputValue('choose_species', { index: rowInfo.index + 1 , group: rowInf
              modified_S = 0)
 
     df <- df %>%
-      merge(df_bnds, all=T)
+      merge(df_bnds, all=T) %>%
+      mutate(modified_PB = 0,
+             modified_MP = 0,
+             modified_GM = 0,
+             modified_HG = 0)
 
     # browser()
     if(!is.null(vals$changes_refcond)){
